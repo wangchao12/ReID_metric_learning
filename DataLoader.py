@@ -4,6 +4,7 @@ import random
 import math
 import scipy.io as sio
 
+
 class DataLoader(object):
     def __init__(self, datafile, batch_person, person_size):
         self.person_list = torch.load(datafile)
