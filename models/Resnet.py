@@ -196,7 +196,6 @@ def resnet101(num_person, num_file):
   model = ResNet(Bottleneck, [3, 4, 23, 3], num_person, num_file)
   return model
 
-
 def resnet152(num_person, num_file):
   """Constructs a ResNet-152 model.
   Args:
