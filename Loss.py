@@ -1,4 +1,6 @@
 import torch
+from SummaryWriter import SummaryWriter
+debuger = SummaryWriter('debuger.mat')
 def all_diffs(a, b):
     """
     Args:
@@ -26,16 +28,16 @@ def cdist(a, b):
 
 
 
-def batch_hard(dists, pids, margin):
-
+def batch_hard(dists, pids, margin, k):
     same_identity_mask = (torch.eq(torch.unsqueeze(pids, dim=1),
-                                  torch.unsqueeze(pids, dim=0))).float()
-    negative_mask = torch.ones_like(same_identity_mask).to('cuda') - same_identity_mask    #类间距离，越大越好
-    positive_mask = same_identity_mask - torch.eye(len(pids)).to('cuda')                   #类内距离，越小越好
-    (max_positive, min_idx) = torch.max(dists * positive_mask, dim=1)
-    (min_negative, max_idx) = torch.min(torch.where(dists * negative_mask > 0, dists * negative_mask, 100), dim=1)
-    positive_dists = torch.mean(max_positive)                   #类内最大，类间最小，非常极端
-    negative_dists = torch.mean(min_negative)
+                                   torch.unsqueeze(pids, dim=0)))
+    negative_mask = torch.ones_like(same_identity_mask).to('cuda') - same_identity_mask       # 类间距离，越大越好
+    positive_mask = same_identity_mask - torch.eye(len(pids), dtype=torch.uint8).to('cuda')   #类内距离，越小越好
+    positive_top_value, idx = torch.topk(torch.masked_select(dists, positive_mask.byte()), k) #类内取最大的k项
+    negative_top_value, idx = torch.topk(-torch.masked_select(dists, negative_mask.byte()), k)
+    positive_dists = torch.mean(positive_top_value)
+    negative_dists = torch.mean(-negative_top_value)
+
     return positive_dists, negative_dists, positive_dists - negative_dists + margin
 
 
@@ -46,20 +48,20 @@ def batch_easy(dists, pids, margin):
                                   torch.unsqueeze(pids, dim=0)))
     negative_mask = torch.ones_like(same_identity_mask).to('cuda') - same_identity_mask     #类间距离，越大越好
     positive_mask = same_identity_mask - torch.eye(len(pids), dtype=torch.uint8).to('cuda') #类内距离，越小越好
-    positive_dists = torch.mean(torch.masked_select(dists, positive_mask.byte()))                       #类内均值，类间均值，平庸状况
+    positive_dists = torch.mean(torch.masked_select(dists, positive_mask.byte()))           #类内均值，类间均值，平庸状况
     negative_dists = torch.mean(torch.masked_select(dists, negative_mask.byte()))
     return positive_dists, negative_dists, positive_dists - negative_dists + margin
 
 
 
-def TripletHardLoss(fc, pids, margin):
+def TripletHardLoss(fc, pids, margin,k):
     all_dists = cdist(fc, fc)
-    pos, neg, loss = batch_hard(all_dists, pids, margin)
+    pos, neg, loss = batch_hard(all_dists, pids, margin, k)
     return pos, neg, loss
 
 
 
-def TripletEasyLoss(fc, pids, margin, alpha):
+def TripletEasyLoss(fc, pids, margin):
     all_dists = cdist(fc, fc)
     pos, neg, loss = batch_easy(all_dists, pids, margin)
     return pos, neg, loss
