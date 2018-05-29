@@ -100,7 +100,7 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-  def __init__(self, block, layers, num_person, num_file, num_classes=128):
+  def __init__(self, block, layers, num_classes=128):
     self.inplanes = 64
     super(ResNet, self).__init__()
     self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -115,9 +115,7 @@ class ResNet(nn.Module):
     # self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
     self.avgpool = nn.AvgPool2d(kernel_size=(8, 4))
     self.fc = nn.Linear(512 * block.expansion, num_classes)
-    self.num_person = num_person
-    self.num_file = num_file
-    self.num_classes = num_classes
+
 
     for m in self.modules():
       if isinstance(m, nn.Conv2d):
@@ -157,49 +155,48 @@ class ResNet(nn.Module):
     x = self.avgpool(x)
     x = x.view(-1, 512)
     x = self.fc(x)
-    x = x.view(self.num_person, self.num_file, self.num_classes)
     return x
 
 
-def resnet18(num_person, num_file):
+def resnet18():
   """Constructs a ResNet-18 model.
   Args:
     pretrained (bool): If True, returns a model pre-trained on ImageNet
   """
-  model = ResNet(BasicBlock, [2, 2, 2, 2], num_person, num_file)
+  model = ResNet(BasicBlock, [2, 2, 2, 2])
   return model
 
 
-def resnet34(num_person, num_file):
+def resnet34():
   """Constructs a ResNet-34 model.
   Args:
     pretrained (bool): If True, returns a model pre-trained on ImageNet
   """
-  model = ResNet(BasicBlock, [3, 4, 6, 3], num_person, num_file)
+  model = ResNet(BasicBlock, [3, 4, 6, 3],)
   return model
 
 
-def resnet50(num_person, num_file):
+def resnet50():
   """Constructs a ResNet-50 model.
   Args:
     pretrained (bool): If True, returns a model pre-trained on ImageNet
   """
-  model = ResNet(Bottleneck, [3, 4, 6, 3], num_person, num_file)
+  model = ResNet(Bottleneck, [3, 4, 6, 3])
   return model
 
 
-def resnet101(num_person, num_file):
+def resnet101():
   """Constructs a ResNet-101 model.
   Args:
     pretrained (bool): If True, returns a model pre-trained on ImageNet
   """
-  model = ResNet(Bottleneck, [3, 4, 23, 3], num_person, num_file)
+  model = ResNet(Bottleneck, [3, 4, 23, 3])
   return model
 
-def resnet152(num_person, num_file):
+def resnet152():
   """Constructs a ResNet-152 model.
   Args:
     pretrained (bool): If True, returns a model pre-trained on ImageNet
   """
-  model = ResNet(Bottleneck, [3, 8, 36, 3], num_person, num_file)
+  model = ResNet(Bottleneck, [3, 8, 36, 3])
   return model

@@ -27,7 +27,7 @@ def cdist(a, b):
 
 
 
-def TripletHardLoss(dists, pids):
+def batch_hard(dists, pids, margin):
 
     same_identity_mask = torch.eq(torch.unsqueeze(pids, axis=1),
                                   torch.unsqueeze(pids, axis=0))
@@ -35,10 +35,11 @@ def TripletHardLoss(dists, pids):
     positive_mask = same_identity_mask - torch.eye(len(pids))                   #类内距离，越小越好
     positive_dists = torch.mean(torch.min(dists * positive_mask, axis=1))       #类内最小，类间最大，非常极端
     negative_dists = torch.mean(torch.max(dists * negative_mask, axis=1))
-    return positive_dists / negative_dists
+    return positive_dists - negative_dists + margin
 
 
-def TripletLoss(dists, pids):
+
+def batch_easy(dists, pids, margin):
 
     same_identity_mask = torch.eq(torch.unsqueeze(pids, axis=1),
                                   torch.unsqueeze(pids, axis=0))
@@ -46,4 +47,18 @@ def TripletLoss(dists, pids):
     positive_mask = same_identity_mask - torch.eye(len(pids))                   #类内距离，越小越好
     positive_dists = torch.mean(dists * positive_mask, axis=1)                  #类内均值，类间均值，平庸状况
     negative_dists = torch.mean(dists * negative_mask, axis=1)
-    return positive_dists / negative_dists
+    return positive_dists - negative_dists + margin
+
+
+
+def TripletHardLoss(fc, pids, margin):
+    all_dists = cdist(fc, fc)
+    loss = batch_hard(all_dists, pids, margin)
+    return loss
+
+
+
+def TripletEasyLoss(fc, pids, margin):
+    all_dists = cdist(fc, fc)
+    loss = batch_easy(all_dists, pids, margin)
+    return loss
