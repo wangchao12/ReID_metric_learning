@@ -11,6 +11,7 @@ class DataLoader(object):
         self.bp = batch_person
         self.ps = person_size
         self.step = 1
+        self.num_step = int(np.ceil(len(self.person_list) / batch_person))
 
     def shuffle_data(self):
         random.shuffle(self.person_list)

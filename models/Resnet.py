@@ -114,6 +114,7 @@ class ResNet(nn.Module):
     # it is slightly better whereas slower to set stride = 1
     # self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
     self.avgpool = nn.AvgPool2d(kernel_size=(8, 4))
+    self.expansion = block.expansion
     self.fc = nn.Linear(512 * block.expansion, num_classes)
 
 
@@ -153,8 +154,9 @@ class ResNet(nn.Module):
     x = self.layer4(x)
 
     x = self.avgpool(x)
-    x = x.view(-1, 512)
+    x = x.view(-1, 512 * self.expansion)
     x = self.fc(x)
+    x = x / torch.unsqueeze(torch.norm(x, 2, -1), dim=1)
     return x
 
 
