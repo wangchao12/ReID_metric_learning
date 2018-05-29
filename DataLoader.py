@@ -13,7 +13,8 @@ class DataLoader(object):
         self.step = 1
 
     def shuffle_data(self):
-        self.person_list = random.shuffle(self.person_list)
+        random.shuffle(self.person_list)
+        self.step = 1
 
     def next_batch(self):
         batch_x = []

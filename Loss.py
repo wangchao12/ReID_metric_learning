@@ -29,24 +29,26 @@ def cdist(a, b):
 
 def batch_hard(dists, pids, margin):
 
-    same_identity_mask = torch.eq(torch.unsqueeze(pids, axis=1),
-                                  torch.unsqueeze(pids, axis=0))
-    negative_mask = torch.ones_like(same_identity_mask) - same_identity_mask    #类间距离，越大越好
-    positive_mask = same_identity_mask - torch.eye(len(pids))                   #类内距离，越小越好
-    positive_dists = torch.mean(torch.min(dists * positive_mask, axis=1))       #类内最小，类间最大，非常极端
-    negative_dists = torch.mean(torch.max(dists * negative_mask, axis=1))
+    same_identity_mask = (torch.eq(torch.unsqueeze(pids, dim=1),
+                                  torch.unsqueeze(pids, dim=0))).float()
+    negative_mask = torch.ones_like(same_identity_mask).to('cuda') - same_identity_mask    #类间距离，越大越好
+    positive_mask = same_identity_mask - torch.eye(len(pids)).to('cuda')                   #类内距离，越小越好
+    (min_positive, min_idx) = torch.min(dists * positive_mask, dim=1)
+    (max_negative, max_idx) = torch.max(dists * negative_mask, dim=1)
+    positive_dists = torch.mean(min_positive)                   #类内最小，类间最大，非常极端
+    negative_dists = torch.mean(max_negative)
     return positive_dists - negative_dists + margin
 
 
 
 def batch_easy(dists, pids, margin):
 
-    same_identity_mask = torch.eq(torch.unsqueeze(pids, axis=1),
-                                  torch.unsqueeze(pids, axis=0))
-    negative_mask = torch.ones_like(same_identity_mask) - same_identity_mask    #类间距离，越大越好
-    positive_mask = same_identity_mask - torch.eye(len(pids))                   #类内距离，越小越好
-    positive_dists = torch.mean(dists * positive_mask, axis=1)                  #类内均值，类间均值，平庸状况
-    negative_dists = torch.mean(dists * negative_mask, axis=1)
+    same_identity_mask = (torch.eq(torch.unsqueeze(pids, dim=1),
+                                  torch.unsqueeze(pids, dim=0))).float()
+    negative_mask = torch.ones_like(same_identity_mask).to('cuda') - same_identity_mask    #类间距离，越大越好
+    positive_mask = same_identity_mask - torch.eye(len(pids)).to('cuda')                   #类内距离，越小越好
+    positive_dists = torch.mean(torch.mean(dists * positive_mask, dim=1))                  #类内均值，类间均值，平庸状况
+    negative_dists = torch.mean(torch.mean(dists * negative_mask, dim=1))
     return positive_dists - negative_dists + margin
 
 
