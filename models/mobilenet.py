@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 import math
 
 
@@ -48,7 +49,7 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV2(nn.Module):
-    def __init__(self, n_class=1000, input_size=224, width_mult=1.):
+    def __init__(self, n_class=128, input_size=128, width_mult=1.):
         super(MobileNetV2, self).__init__()
         # setting of inverted residual blocks
         self.interverted_residual_setting = [
@@ -58,7 +59,7 @@ class MobileNetV2(nn.Module):
             [6, 32, 3, 2],
             [6, 64, 4, 2],
             [6, 96, 3, 1],
-            [6, 160, 3, 2],
+            [6, 160, 3, 1],
             [6, 320, 1, 1],
         ]
 
@@ -78,7 +79,7 @@ class MobileNetV2(nn.Module):
                 input_channel = output_channel
         # building last several layers
         self.features.append(conv_1x1_bn(input_channel, self.last_channel))
-        self.features.append(nn.AvgPool2d(input_size/32))
+        self.features.append(nn.AvgPool2d(kernel_size=(8, 4)))
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
 
@@ -94,6 +95,7 @@ class MobileNetV2(nn.Module):
         x = self.features(x)
         x = x.view(-1, self.last_channel)
         x = self.classifier(x)
+        x = x / torch.unsqueeze(torch.norm(x, 2, -1), dim=1)
         return x
 
     def _initialize_weights(self):
@@ -107,6 +109,5 @@ class MobileNetV2(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
-                n = m.weight.size(1)
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()

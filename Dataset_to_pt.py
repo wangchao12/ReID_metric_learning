@@ -25,10 +25,10 @@ def imgs_to_pt(path):
 
 
 if __name__ == '__main__':
-    file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
+    # file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
     file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
-    person_list = imgs_to_pt(path=file_path_train)
-    torch.save(person_list, 'traindata.pt')
+    # person_list = imgs_to_pt(path=file_path_train)
+    # torch.save(person_list, 'traindata.pt')
     person_list2 = imgs_to_pt(path=file_path_test)
     torch.save(person_list2[4:-1], 'testdata.pt')
     # print(np.shape(person_list))
