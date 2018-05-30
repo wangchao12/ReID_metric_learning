@@ -8,8 +8,8 @@ from SummaryWriter import SummaryWriter
 
 
 ###parameters setting###
-batch_person = 16
-person_size = 8
+batch_person = 8
+person_size = 4
 epoches = 1000
 
 
@@ -19,6 +19,7 @@ writer = SummaryWriter('.\log\log.mat')
 
 
 model = MobileNetV2().to('cuda')
+# model.load_state_dict(torch.load('.\checkpoint\ReID_model147.pt'))
 optresnet = optim.Adam(model.parameters(), lr=1e-5)
 pids_n = []
 
@@ -33,22 +34,23 @@ for i in range(epoches):
         iter += 1
         batch_x = trainloader.next_batch()
         fc = model.forward(torch.cuda.FloatTensor(batch_x))
-        pos, neg, loss = TripletEasyLoss(fc=fc, pids=pids, margin=1)
+        pos, neg, loss = TripletHardLoss(fc=fc, pids=pids, margin=1, k_pos=50, k_neg=100)
         loss.backward()
         optresnet.step()
-        writer.write('trainloss', float(loss))
+        writer.write('trainHardLoss', float(loss))
         print('train epoch', i, 'iter', j, 'loss', float(loss), 'pos', float(pos), 'neg', float(neg))
     sum_loss = 0
     for k in range(testloader.num_step):
         test_x = testloader.next_batch()
         fc = model.forward(torch.cuda.FloatTensor(test_x))
-        pos, neg, loss = TripletEasyLoss(fc=fc, pids=pids, margin=1)
+        pos, neg, loss = TripletHardLoss(fc=fc, pids=pids, margin=1, k_pos=50, k_neg=100)
         sum_loss = sum_loss + float(loss)
-        writer.write('testloss', float(loss))
+        writer.write('testHardLoss', float(loss))
         print('test epoch', i, 'iter', k, 'loss', float(loss), 'pos', float(pos), 'neg', float(neg))
+    print('min_test_loss', min_test_loss)
     if sum_loss / testloader.num_step < min_test_loss:
         min_test_loss = sum_loss / testloader.num_step
         print('**************save model*******************')
-        torch.save(model.state_dict(), '.\checkpoint\ReID_model{}.pt'.format(str(i)))
+        torch.save(model.state_dict(), '.\checkpoint\ReID_HardModel{}.pt'.format(str(i)))
         writer.savetomat()
 

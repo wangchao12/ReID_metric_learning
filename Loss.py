@@ -28,13 +28,25 @@ def cdist(a, b):
 
 
 
-def batch_hard(dists, pids, margin, k):
+def batch_hard(dists, pids, margin, k_pos, k_neg):
+    batch_size = len(pids)
     same_identity_mask = (torch.eq(torch.unsqueeze(pids, dim=1),
                                    torch.unsqueeze(pids, dim=0)))
     negative_mask = torch.ones_like(same_identity_mask).to('cuda') - same_identity_mask       # 类间距离，越大越好
     positive_mask = same_identity_mask - torch.eye(len(pids), dtype=torch.uint8).to('cuda')   #类内距离，越小越好
-    positive_top_value, idx = torch.topk(torch.masked_select(dists, positive_mask.byte()), k) #类内取最大的k项
-    negative_top_value, idx = torch.topk(-torch.masked_select(dists, negative_mask.byte()), k)
+    negative_matrix = torch.masked_select(dists, negative_mask.byte()).view(batch_size, -1)
+    positive_matrix = torch.masked_select(dists, positive_mask.byte()).view(batch_size, -1)
+
+    negative_top_value, idx = torch.topk(-torch.masked_select(dists, negative_mask.byte()), k_neg)
+    positive_top_value, idx = torch.topk(torch.masked_select(dists, positive_mask.byte()), k_pos) #类内取最大的k项
+    # pos_select_value = torch.masked_select(dists, positive_mask.byte())
+    # neg_select_value = torch.masked_select(dists, negative_mask.byte())
+    # debuger.write('pos_value', positive_top_value.cpu().detach().numpy())
+    # debuger.write('neg_value', negative_top_value.cpu().detach().numpy())
+    debuger.write('pos_select_value', negative_matrix.cpu().detach().numpy())
+    debuger.write('neg_select_value', positive_matrix.cpu().detach().numpy())
+    debuger.write('dists', dists.cpu().detach().numpy())
+    debuger.savetomat()
     positive_dists = torch.mean(positive_top_value)
     negative_dists = torch.mean(-negative_top_value)
 
@@ -54,9 +66,9 @@ def batch_easy(dists, pids, margin):
 
 
 
-def TripletHardLoss(fc, pids, margin,k):
+def TripletHardLoss(fc, pids, margin,k_pos, k_neg):
     all_dists = cdist(fc, fc)
-    pos, neg, loss = batch_hard(all_dists, pids, margin, k)
+    pos, neg, loss = batch_hard(all_dists, pids, margin, k_pos, k_neg)
     return pos, neg, loss
 
 
