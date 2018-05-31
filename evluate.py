@@ -6,6 +6,8 @@ import scipy.io as sio
 
 
 model = MobileNetV2().to('cuda')
+model.load_state_dict(torch.load('.\checkpoint\ReID_HardModel234.pt'))
+
 
 def extract_fc(query, name):
     query_list = []
@@ -27,11 +29,12 @@ def extract_fc(query, name):
 
 
 if __name__ =='__main__':
-    query = torch.load('.\dataset\query.pt')
-    gallary = torch.load('.\dataset\gallary.pt')
+    query = torch.load('.\evulate\query.pt')
     gallary_fc = extract_fc(gallary, 'gallary')
     query_fc = extract_fc(query, 'query')
     sio.savemat('./checkpoint/query_fc.mat', query_fc)
     sio.savemat('./checkpoint/gallary_fc.mat', gallary_fc)
 
 
+
+    gallary = torch.load('.\evulate\gallary.pt')

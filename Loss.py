@@ -46,21 +46,13 @@ def batch_hard(dists, pids, margin):
                          torch.ones_like(positive_matrix), torch.zeros_like(positive_matrix))
     positive_dists = torch.mean(torch.masked_select(positive_matrix, positive_hard_mask.byte()))
     negative_dists = torch.mean(torch.masked_select(negative_matrix, negative_hard_mask.byte()))
+    n_hard_positive = len(torch.masked_select(positive_matrix, positive_hard_mask.byte()))
+    n_hard_negaitive = len(torch.masked_select(negative_matrix, negative_hard_mask.byte()))
 
-    # negative_top_value, idx = torch.topk(-torch.masked_select(dists, negative_mask.byte()), k_neg)
-    # positive_top_value, idx = torch.topk(torch.masked_select(dists, positive_mask.byte()), k_pos) #类内取最大的k项
-    # # pos_select_value = torch.masked_select(dists, positive_mask.byte())
-    # # neg_select_value = torch.masked_select(dists, negative_mask.byte())
-    # # debuger.write('pos_value', positive_top_value.cpu().detach().numpy())
-    # # debuger.write('neg_value', negative_top_value.cpu().detach().numpy())
-    # debuger.write('pos_select_value', negative_matrix.cpu().detach().numpy())
-    # debuger.write('neg_select_value', positive_matrix.cpu().detach().numpy())
-    # debuger.write('dists', dists.cpu().detach().numpy())
-    # debuger.savetomat()
-    # positive_dists = torch.mean(positive_top_value)
-    # negative_dists = torch.mean(-negative_top_value)
+    output = {'pos_dist': positive_dists, 'neg_dist': negative_dists, 'hard_pos': n_hard_positive, 'hard_neg': n_hard_negaitive,
+              'loss': positive_dists - negative_dists + 1}
 
-    return positive_dists, negative_dists, positive_dists - negative_dists + margin
+    return output
 
 
 
@@ -78,8 +70,8 @@ def batch_easy(dists, pids, margin):
 
 def TripletHardLoss(fc, pids, margin):
     all_dists = cdist(fc, fc)
-    pos, neg, loss = batch_hard(all_dists, pids, margin)
-    return pos, neg, loss
+    output = batch_hard(all_dists, pids, margin)
+    return output
 
 
 
