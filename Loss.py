@@ -28,7 +28,7 @@ def cdist(a, b):
 
 
 
-def batch_hard(dists, pids, margin):
+def batch_Semihard(dists, pids, margin):
     batch_size = len(pids)
     same_identity_mask = (torch.eq(torch.unsqueeze(pids, dim=1),
                                    torch.unsqueeze(pids, dim=0)))
@@ -36,23 +36,41 @@ def batch_hard(dists, pids, margin):
     positive_mask = same_identity_mask - torch.eye(len(pids), dtype=torch.uint8).to('cuda')   #类内距离，越小越好
     negative_matrix = torch.masked_select(dists, negative_mask.byte()).view(batch_size, -1)
     positive_matrix = torch.masked_select(dists, positive_mask.byte()).view(batch_size, -1)
-    positive_max, positive_idx = torch.max(positive_matrix, dim=1)
-    negative_min, negative_idx = torch.min(negative_matrix, dim=1)
-    positive_max = torch.unsqueeze(positive_max, 1).expand_as(negative_matrix)
-    negative_min = torch.unsqueeze(negative_min, 1).expand_as(positive_matrix)
-    negative_hard_mask = torch.where(negative_matrix < positive_max + margin,
-                         torch.ones_like(negative_matrix), torch.zeros_like(negative_matrix))
-    positive_hard_mask = torch.where(positive_matrix > negative_min,
-                         torch.ones_like(positive_matrix), torch.zeros_like(positive_matrix))
-    positive_dists = torch.mean(torch.masked_select(positive_matrix, positive_hard_mask.byte()))
-    negative_dists = torch.mean(torch.masked_select(negative_matrix, negative_hard_mask.byte()))
-    n_hard_positive = len(torch.masked_select(positive_matrix, positive_hard_mask.byte()))
-    n_hard_negaitive = len(torch.masked_select(negative_matrix, negative_hard_mask.byte()))
+    diff = torch.unsqueeze(positive_matrix, dim=1) - torch.unsqueeze(negative_matrix, dim=2)
+    diff_m = diff + torch.ones_like(diff) * margin
+    semi_mask1 = torch.where(diff < torch.zeros_like(diff), torch.ones_like(diff), torch.zeros_like(diff))
+    semi_mask2 = torch.where(diff_m > torch.zeros_like(diff), torch.ones_like(diff), torch.zeros_like(diff))
+    semi_mask = semi_mask1 * semi_mask2
+    semi_hards = torch.masked_select(diff_m, semi_mask.byte())
+    loss = torch.mean(semi_hards)
+    num_hards = len(semi_hards)
 
-    output = {'pos_dist': positive_dists, 'neg_dist': negative_dists, 'hard_pos': n_hard_positive, 'hard_neg': n_hard_negaitive,
-              'loss': positive_dists - negative_dists + 1}
+    return loss, num_hards
 
-    return output
+
+def batch_hard(dists, pids, margin):
+    batch_size = len(pids)
+    same_identity_mask = (torch.eq(torch.unsqueeze(pids, dim=1),
+                                   torch.unsqueeze(pids, dim=0)))
+    negative_mask = torch.ones_like(same_identity_mask).to('cuda') - same_identity_mask  # 类间距离，越大越好
+    positive_mask = same_identity_mask - torch.eye(len(pids), dtype=torch.uint8).to('cuda')  # 类内距离，越小越好
+    negative_matrix = torch.masked_select(dists, negative_mask.byte()).view(batch_size, -1)
+    positive_matrix = torch.masked_select(dists, positive_mask.byte()).view(batch_size, -1)
+    diff = torch.unsqueeze(negative_matrix, dim=2) - torch.unsqueeze(positive_matrix, dim=1)
+    diff_m = diff - torch.ones_like(diff) * margin
+    semi_mask1 = torch.where(diff > torch.zeros_like(diff), torch.ones_like(diff), torch.zeros_like(diff))
+    semi_mask2 = torch.where(diff_m < torch.zeros_like(diff), torch.ones_like(diff), torch.zeros_like(diff))
+    semi_mask = semi_mask1 * semi_mask2
+    semi_hards = torch.masked_select(diff, semi_mask.byte())
+    loss = torch.mean(semi_hards)
+    num_hards = len(semi_hards)
+
+    return loss, num_hards
+
+
+
+
+
 
 
 
@@ -68,11 +86,15 @@ def batch_easy(dists, pids, margin):
 
 
 
+def TripletSemihardLoss(fc, pids, margin):
+    all_dists = cdist(fc, fc)
+    loss, num_hards = batch_Semihard(all_dists, pids, margin)
+    return loss, num_hards
+
 def TripletHardLoss(fc, pids, margin):
     all_dists = cdist(fc, fc)
-    output = batch_hard(all_dists, pids, margin)
-    return output
-
+    loss, num_hards = batch_hard(all_dists, pids, margin)
+    return loss, num_hards
 
 
 def TripletEasyLoss(fc, pids, margin):
