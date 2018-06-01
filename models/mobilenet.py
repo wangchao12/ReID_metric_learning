@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
 import math
 
@@ -87,6 +88,7 @@ class MobileNetV2(nn.Module):
         self.classifier = nn.Sequential(
             nn.Dropout(),
             nn.Linear(self.last_channel, n_class),
+            nn.Tanh()
         )
 
         self._initialize_weights()
@@ -95,7 +97,8 @@ class MobileNetV2(nn.Module):
         x = self.features(x)
         x = x.view(-1, self.last_channel)
         x = self.classifier(x)
-        x = x / torch.unsqueeze(torch.norm(x, 2, -1), dim=1)
+        # x = F.tanh(x)
+        # x = x / torch.unsqueeze(torch.norm(x, 2, -1), dim=1)
         return x
 
     def _initialize_weights(self):

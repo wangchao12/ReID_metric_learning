@@ -69,9 +69,23 @@ def batch_hard(dists, pids, margin):
 
 
 
+def batch_Veryhard(dists, pids, margin):
+    batch_size = len(pids)
+    same_identity_mask = (torch.eq(torch.unsqueeze(pids, dim=1),
+                                   torch.unsqueeze(pids, dim=0)))
+    negative_mask = torch.ones_like(same_identity_mask).to('cuda') - same_identity_mask  # 类间距离，越大越好
+    positive_mask = same_identity_mask - torch.eye(len(pids), dtype=torch.uint8).to('cuda')  # 类内距离，越小越好
+    negative_matrix = torch.masked_select(dists, negative_mask.byte()).view(batch_size, -1)
+    positive_matrix = torch.masked_select(dists, positive_mask.byte()).view(batch_size, -1)
+    diff = torch.unsqueeze(negative_matrix, dim=2) - torch.unsqueeze(positive_matrix, dim=1)
+    diff_m = diff - torch.ones_like(diff) * margin
+    diff_m2 = diff + torch.ones_like(diff) * margin
+    semi_mask = torch.where(diff_m < torch.zeros_like(diff), torch.ones_like(diff), torch.zeros_like(diff))
+    semi_hards = torch.masked_select(diff_m2, semi_mask.byte())
+    loss = torch.mean(semi_hards)
+    num_hards = len(semi_hards)
 
-
-
+    return loss, num_hards
 
 
 def batch_easy(dists, pids, margin):
@@ -96,6 +110,11 @@ def TripletHardLoss(fc, pids, margin):
     loss, num_hards = batch_hard(all_dists, pids, margin)
     return loss, num_hards
 
+
+def TripletVerthardLoss(fc, pids, margin):
+    all_dists = cdist(fc, fc)
+    loss, num_hards = batch_Veryhard(all_dists, pids, margin)
+    return loss, num_hards
 
 def TripletEasyLoss(fc, pids, margin):
     all_dists = cdist(fc, fc)
