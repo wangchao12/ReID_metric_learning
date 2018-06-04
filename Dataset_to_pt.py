@@ -1,6 +1,7 @@
 import cv2
 import os
 import torch
+import numpy as np
 
 
 
@@ -38,19 +39,22 @@ def img_to_test(path):
 
 
 if __name__ == '__main__':
-    # # file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
-    # file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
-    # # person_list = imgs_to_pt(path=file_path_train)
-    # # torch.save(person_list, 'traindata.pt')
-    # person_list2 = imgs_to_pt(path=file_path_test)
-    # torch.save(person_list2[4:-1], 'testdata.pt')
-    # # print(np.shape(person_list))
-    query_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\query\\'
-    gallary_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
-    query_list = img_to_test(query_path)
-    gallary_list = img_to_test(gallary_path)
-    torch.save(query_list, 'query.pt')
-    torch.save(gallary_list, 'gallary.pt')
+    file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
+    file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
+    person_list = imgs_to_pt(path=file_path_train)
+    np.savez('traindata.npz', person_list)
+    person_list2 = imgs_to_pt(path=file_path_test)
+    np.savez('testdata.npz', person_list2)
+
+
+
+    # print(np.shape(person_list))
+    # query_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\query\\'
+    # gallary_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
+    # query_list = img_to_test(query_path)
+    # gallary_list = img_to_test(gallary_path)
+    # torch.save(query_list, 'query.pt')
+    # torch.save(gallary_list, 'gallary.pt')
 
 
 

@@ -87,8 +87,7 @@ class MobileNetV2(nn.Module):
         # building classifier
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(self.last_channel, n_class),
-            nn.Tanh()
+            nn.Linear(self.last_channel, n_class)
         )
 
         self._initialize_weights()
@@ -98,7 +97,7 @@ class MobileNetV2(nn.Module):
         x = x.view(-1, self.last_channel)
         x = self.classifier(x)
         # x = F.tanh(x)
-        # x = x / torch.unsqueeze(torch.norm(x, 2, -1), dim=1)
+        x = x / torch.unsqueeze(torch.norm(x, 2, -1), dim=1)
         return x
 
     def _initialize_weights(self):

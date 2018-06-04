@@ -6,7 +6,7 @@ import scipy.io as sio
 
 
 model = MobileNetV2().to('cuda')
-model.load_state_dict(torch.load('.\checkpoint\ReID_HardModel283.pt'))
+model.load_state_dict(torch.load('.\checkpoint\ReID_HardModel54.pt'))
 
 
 def extract_fc(query, name):
