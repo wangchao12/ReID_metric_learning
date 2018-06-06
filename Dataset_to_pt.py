@@ -2,15 +2,16 @@ import cv2
 import os
 import torch
 import numpy as np
+import scipy.io as sio
 
 
 
 def imgs_to_pt(path):
     data_list = []
+    last_id = []
     person_list = []
-    last_id = ' '
     files = os.listdir(path)
-    for file_i in files:
+    for i, file_i in enumerate(files):
         current_id = file_i[0:4]
         if current_id == last_id:
             img = cv2.imread(os.path.join(path, file_i))
@@ -22,7 +23,14 @@ def imgs_to_pt(path):
             img = cv2.imread(os.path.join(path, file_i))
             person_list.append(img)
             last_id = file_i[0:4]
-    return data_list
+    final_list = []
+    for i, persion_i in enumerate(data_list):
+        person_list2 = []
+        for file_i in persion_i:
+            dict={'image': file_i, 'id': i}
+            person_list2.append(dict)
+        final_list.append(person_list2)
+    return final_list
 
 def img_to_test(path):
     file_list = []
@@ -39,22 +47,23 @@ def img_to_test(path):
 
 
 if __name__ == '__main__':
-    file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
-    file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
-    person_list = imgs_to_pt(path=file_path_train)
-    np.savez('traindata.npz', person_list)
-    person_list2 = imgs_to_pt(path=file_path_test)
-    np.savez('testdata.npz', person_list2)
+    file_path_train1 = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
+    file_path_train2 = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
+    person_list1 = imgs_to_pt(path=file_path_train1)
+    person_list2 = imgs_to_pt(path=file_path_train2)
+    torch.save(person_list1, '.\\traindata.pt')
+    torch.save(person_list2, '.\\testdata.pt')
 
 
 
-    # print(np.shape(person_list))
+
+    # # print(np.shape(person_list))
     # query_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\query\\'
-    # gallary_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
-    # query_list = img_to_test(query_path)
-    # gallary_list = img_to_test(gallary_path)
-    # torch.save(query_list, 'query.pt')
-    # torch.save(gallary_list, 'gallary.pt')
+    # gallary_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
+    # # query_list = img_to_test(query_path)
+    # train_list = img_to_test(gallary_path)
+    # # torch.save(query_list, 'query.pt')
+    # torch.save(train_list, 'train.pt')
 
 
 

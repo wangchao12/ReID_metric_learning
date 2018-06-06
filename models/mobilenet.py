@@ -2,12 +2,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import math
-
+is_train = False
 
 def conv_bn(inp, oup, stride):
     return nn.Sequential(
         nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-        nn.BatchNorm2d(oup),
+        nn.BatchNorm2d(oup, track_running_stats=is_train),
         nn.ReLU6(inplace=True)
     )
 
@@ -15,7 +15,7 @@ def conv_bn(inp, oup, stride):
 def conv_1x1_bn(inp, oup):
     return nn.Sequential(
         nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-        nn.BatchNorm2d(oup),
+        nn.BatchNorm2d(oup, track_running_stats=is_train),
         nn.ReLU6(inplace=True)
     )
 
@@ -31,15 +31,15 @@ class InvertedResidual(nn.Module):
         self.conv = nn.Sequential(
             # pw
             nn.Conv2d(inp, inp * expand_ratio, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(inp * expand_ratio),
+            nn.BatchNorm2d(inp * expand_ratio, track_running_stats=is_train),
             nn.ReLU6(inplace=True),
             # dw
             nn.Conv2d(inp * expand_ratio, inp * expand_ratio, 3, stride, 1, groups=inp * expand_ratio, bias=False),
-            nn.BatchNorm2d(inp * expand_ratio),
+            nn.BatchNorm2d(inp * expand_ratio, track_running_stats=is_train),
             nn.ReLU6(inplace=True),
             # pw-linear
             nn.Conv2d(inp * expand_ratio, oup, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(oup),
+            nn.BatchNorm2d(oup, track_running_stats=is_train),
         )
 
     def forward(self, x):
@@ -50,7 +50,7 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV2(nn.Module):
-    def __init__(self, n_class=128, input_size=128, width_mult=1.):
+    def __init__(self, n_classes, n_embeddings=128, input_size=128, width_mult=1.):
         super(MobileNetV2, self).__init__()
         # setting of inverted residual blocks
         self.interverted_residual_setting = [
@@ -85,20 +85,23 @@ class MobileNetV2(nn.Module):
         self.features = nn.Sequential(*self.features)
 
         # building classifier
+        self.embedding = nn.Sequential(
+
+            nn.Linear(self.last_channel, n_embeddings)
+        )
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(self.last_channel, n_class)
+            nn.Linear(n_embeddings, n_classes)
         )
-
         self._initialize_weights()
 
     def forward(self, x):
         x = self.features(x)
         x = x.view(-1, self.last_channel)
-        x = self.classifier(x)
-        # x = F.tanh(x)
-        x = x / torch.unsqueeze(torch.norm(x, 2, -1), dim=1)
-        return x
+        embedding = self.embedding(x)
+        embedding = embedding / torch.unsqueeze(torch.norm(embedding, 2, -1), dim=1)
+        cls = self.classifier(embedding)
+        return embedding, cls
 
     def _initialize_weights(self):
         for m in self.modules():
