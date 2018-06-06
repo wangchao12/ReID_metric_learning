@@ -1,4 +1,5 @@
 import torch as th
+import numpy as np
 from SummaryWriter import SummaryWriter
 debuger = SummaryWriter('debuger.mat')
 
@@ -44,33 +45,17 @@ def CenterEasyLoss(fc, batch_person, num_file, margin, fcs):
 
 
 
-def CenterEasyLoss2(fc, batch_person, num_file, fcs):
-    fc = fc.view(batch_person, num_file, fcs)
-    person_center = th.mean(input=fc, dim=1)
-    distance = th.norm(fc - th.unsqueeze(person_center, dim=1), dim=-1)
-    center_mean_loss = th.mean(distance)
-    mask = th.where(distance > center_mean_loss, th.ones_like(distance), th.zeros_like(distance))
-    center_up = th.masked_select(distance, mask.to('cuda').byte())
-    center_loss = th.mean(center_up)
-    cross_matrix = cdist(person_center, person_center)
-    cross_mask = th.ones_like(cross_matrix) - th.eye(batch_person).to('cuda')
-    cross_vector = th.masked_select(cross_matrix, cross_mask.byte())
-    # print('size', cross_vector.size())
-    min_cross, idx = th.min(cross_vector.view(batch_person, -1), -1)       #其它类中心与目标最小距离
-    cross_loss = th.mean(min_cross)
+def CenterEasyLoss3(fc, batch_person, num_file, scale, fcs):
 
-    return center_loss, cross_loss, center_loss / cross_loss
+    #########state of art ################
 
-
-
-def CenterEasyLoss3(fc, batch_person, num_file, fcs):
     fc = fc.view(batch_person, num_file, fcs)
     person_center = th.mean(input=fc, dim=1)
     distance = th.norm(fc - th.unsqueeze(person_center, dim=1), p=2, dim=-1)
     (center_max, idx) = th.max(distance, dim=-1)
     center_mean_loss = th.mean(distance)
     center_max_loss = th.mean(center_max)
-    center_loss = 0.5 * (center_max_loss + center_mean_loss)
+    center_loss = scale * center_max_loss + (1 - scale) * center_mean_loss
     cross_matrix = cdist(person_center, person_center)
     cross_mask = th.ones_like(cross_matrix) - th.eye(batch_person).to('cuda')
     cross_vector = th.masked_select(cross_matrix, cross_mask.byte())
@@ -81,22 +66,39 @@ def CenterEasyLoss3(fc, batch_person, num_file, fcs):
     return center_loss, cross_loss, center_loss / cross_loss
 
 
-def CenterEasyLoss4(fc, batch_person, num_file, fcs):
-    fc = fc.view(batch_person, num_file, fcs)
-    person_center = th.mean(input=fc, dim=1)
-    distance = th.norm(fc - th.unsqueeze(person_center, dim=1), dim=-1)
-    (center_max, idx) = th.max(distance, dim=-1)
-    center_mean_loss = th.mean(distance)
-    center_max_loss = th.mean(center_max)
-    center_loss = center_max_loss
-    cross_matrix = cdist(person_center, person_center)
-    cross_mask = th.ones_like(cross_matrix) - th.eye(batch_person).to('cuda')
-    cross_vector = th.masked_select(cross_matrix, cross_mask.byte())
-    # print('size', cross_vector.size())
-    min_cross, idx = th.min(cross_vector.view(batch_person, -1), -1)       #其它类中心与目标最小距离
-    cross_loss = th.mean(min_cross)
 
-    return center_loss, cross_loss, center_loss
+
+def CenterEasyLoss4(fc, pids, batch_person, num_file, scale, margin, fcs):
+    center_loss, cross_mean_loss, loss = CenterEasyLoss3(fc, batch_person, num_file, scale, fcs)
+
+    person_center = th.unsqueeze(th.mean(input=fc.view(batch_person, num_file, fcs), dim=1), dim=0)
+    distance = th.norm(th.unsqueeze(fc, dim=1) - person_center, dim=-1)
+    pid = th.from_numpy(np.arange(0, batch_person, 1, dtype=np.int32)).to('cuda')
+    same_identity_mask = (th.eq(th.unsqueeze(pids, dim=1), th.unsqueeze(pid, dim=0)))
+    center_matrix = th.transpose(th.masked_select(distance, same_identity_mask.byte()).view(batch_person, -1), 0, 1)
+    cross_matrix = distance + (same_identity_mask.float() * 100)
+    max_center, idx = th.max(center_matrix, dim=0)
+    max_center = th.unsqueeze(max_center, dim=0).expand_as(cross_matrix) + th.ones_like(cross_matrix) * margin
+    hard_cross_mask = th.where(cross_matrix < max_center, th.ones_like(cross_matrix), th.zeros_like(cross_matrix))
+    hard_vector = th.masked_select(cross_matrix, hard_cross_mask.byte())
+    cross_hard_loss = th.mean(hard_vector)
+    n_hards = len(hard_vector) / batch_person
+    cross_loss = scale * cross_hard_loss + (1 - scale) * cross_mean_loss
+
+    return center_loss, cross_loss, center_loss / cross_loss, n_hards
+
+
+
+def TripletHardLoss(fc, pids):
+    all_distance = cdist(fc, fc)
+    mask = (th.eq(th.unsqueeze(pids, dim=1), th.unsqueeze(pids, dim=0)))
+    same_identity_mask = mask - th.eye(len(pids), dtype=th.uint8).to('cuda')
+    cross_identity_mask = th.ones_like(mask) - mask
+    same_identity_mask_np = same_identity_mask.detach().to('cpu').numpy()
+    cross_identity_mask_np = cross_identity_mask.detach().to('cpu').numpy()
+
+
+    return  all_distance, all_distance, all_distance, all_distance
 
 
 

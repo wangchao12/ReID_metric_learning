@@ -5,8 +5,8 @@ import time
 import scipy.io as sio
 
 
-model = MobileNetV2(n_classes=751).to('cuda')
-model.load_state_dict(torch.load('.\checkpoint\ReID_HardModel104.pt'))
+model = MobileNetV2().to('cuda')
+model.load_state_dict(torch.load('.\checkpoint\ReID_HardModel182.pt'))
 
 
 def extract_fc(query, name):
@@ -17,7 +17,7 @@ def extract_fc(query, name):
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            fc, cls = model.forward(torch.cuda.FloatTensor(img2))
+            fc= model.forward(torch.cuda.FloatTensor(img2))
             t2 = time.time()
             dict_i = {'img': img, 'fc': fc.cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)

@@ -50,7 +50,7 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV2(nn.Module):
-    def __init__(self, n_classes, n_embeddings=128, input_size=128, width_mult=1.):
+    def __init__(self, n_embeddings=128, input_size=128, width_mult=1.):
         super(MobileNetV2, self).__init__()
         # setting of inverted residual blocks
         self.interverted_residual_setting = [
@@ -89,10 +89,6 @@ class MobileNetV2(nn.Module):
 
             nn.Linear(self.last_channel, n_embeddings)
         )
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(n_embeddings, n_classes)
-        )
         self._initialize_weights()
 
     def forward(self, x):
@@ -100,8 +96,7 @@ class MobileNetV2(nn.Module):
         x = x.view(-1, self.last_channel)
         embedding = self.embedding(x)
         embedding = embedding / torch.unsqueeze(torch.norm(embedding, 2, -1), dim=1)
-        cls = self.classifier(embedding)
-        return embedding, cls
+        return embedding
 
     def _initialize_weights(self):
         for m in self.modules():
