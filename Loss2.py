@@ -1,5 +1,6 @@
 import torch as th
 import numpy as np
+import scipy.io as sio
 from SummaryWriter import SummaryWriter
 debuger = SummaryWriter('debuger.mat')
 
@@ -90,15 +91,19 @@ def CenterEasyLoss4(fc, pids, batch_person, num_file, scale, margin, fcs):
 
 
 def TripletHardLoss(fc, pids):
+
     all_distance = cdist(fc, fc)
     mask = (th.eq(th.unsqueeze(pids, dim=1), th.unsqueeze(pids, dim=0)))
     same_identity_mask = mask - th.eye(len(pids), dtype=th.uint8).to('cuda')
-    cross_identity_mask = th.ones_like(mask) - mask
-    same_identity_mask_np = same_identity_mask.detach().to('cpu').numpy()
-    cross_identity_mask_np = cross_identity_mask.detach().to('cpu').numpy()
+    cross_identity_mask = mask
+    same_matrix = all_distance * same_identity_mask.float()
+    cross_matrix = all_distance + cross_identity_mask.float() * 1e6
+    (max_center, idx) = th.max(same_matrix, dim=-1)
+    (min_cross, idx) = th.min(cross_matrix, dim=-1)
+    center_loss = th.mean(max_center)
+    cross_loss = th.mean(min_cross)
 
-
-    return  all_distance, all_distance, all_distance, all_distance
+    return center_loss, cross_loss, center_loss / cross_loss
 
 
 
@@ -121,6 +126,7 @@ def CenterHardLoss2(fc, batch_person, num_file, fcs=128):
     (cross_loss, idx) = th.min(cross_loss, dim=-1)
     cross_loss = th.mean(cross_loss)
     return center_loss, cross_loss, center_loss / cross_loss
+
 
 
 
@@ -206,3 +212,14 @@ def CenterSemihardLoss2(fc, batch_person, num_file, fcs=128):
         cross_loss = th.mean(cross_min)
     num_hards = len(cross_loss_list)
     return center_loss, cross_loss, center_loss / cross_loss, num_hards
+
+
+
+if __name__ == '__main__':
+
+    fc = th.load('./fc.pt')
+    fc_np = fc.detach().cpu().numpy()
+    dist = cdist(fc, fc)
+    dist_np = dist.detach().cpu().numpy()
+    print()
+
