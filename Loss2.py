@@ -31,21 +31,6 @@ def cdist(a, b):
     return th.norm(diffs, 2, -1)
 
 
-def CenterEasyLoss(fc, batch_person, num_file, margin, fcs):
-    fc = fc.view(batch_person, num_file, fcs)
-    person_center = th.mean(input=fc, dim=1)
-    center_loss = th.mean(th.norm(fc - th.unsqueeze(person_center, dim=1), dim=-1))
-    cross_matrix = cdist(person_center, person_center)
-    cross_mask = th.ones_like(cross_matrix) - th.eye(batch_person).to('cuda')
-    cross_vector = th.masked_select(cross_matrix, cross_mask.byte())
-    # print('size', cross_vector.size())
-    min_cross, idx = th.min(cross_vector.view(batch_person, -1), -1)       #其它类中心与目标最小距离
-    cross_loss = th.mean(min_cross)
-
-    return center_loss, cross_loss, center_loss / cross_loss
-
-
-
 def CenterEasyLoss3(fc, batch_person, num_file, scale, fcs):
 
     #########state of art ################
@@ -82,11 +67,56 @@ def CenterEasyLoss4(fc, pids, batch_person, num_file, scale, margin, fcs):
     max_center = th.unsqueeze(max_center, dim=0).expand_as(cross_matrix) + th.ones_like(cross_matrix) * margin
     hard_cross_mask = th.where(cross_matrix < max_center, th.ones_like(cross_matrix), th.zeros_like(cross_matrix))
     hard_vector = th.masked_select(cross_matrix, hard_cross_mask.byte())
-    cross_hard_loss = th.mean(hard_vector)
+    if len(hard_vector) > 0:
+        cross_hard_loss = th.mean(hard_vector)
+    else:
+        hard_vector, idx = th.min(cross_matrix, 0)
+        cross_hard_loss = th.mean(hard_vector)
+
     n_hards = len(hard_vector) / batch_person
     cross_loss = scale * cross_hard_loss + (1 - scale) * cross_mean_loss
 
     return center_loss, cross_loss, center_loss / cross_loss, n_hards
+
+
+
+def CenterEasyLoss5(fc, pids, batch_person, num_file, scale, margin, fcs):
+    person_center = th.unsqueeze(th.mean(input=fc.view(batch_person, num_file, fcs), dim=1), dim=0)
+    distance = th.norm(th.unsqueeze(fc, dim=1) - person_center, dim=-1)
+    pid = th.from_numpy(np.arange(0, batch_person, 1, dtype=np.int32)).to('cuda')
+    same_identity_mask = (th.eq(th.unsqueeze(pids, dim=1), th.unsqueeze(pid, dim=0)))
+    center_matrix = th.transpose(th.masked_select(distance, same_identity_mask.byte()).view(batch_person, -1), 0, 1)
+    cross_matrix = distance + (same_identity_mask.float() * 100)
+    max_center, idx = th.max(center_matrix, dim=0)
+    min_cross, idx = th.min(cross_matrix, dim=0)
+    max_center_n = th.unsqueeze(max_center, dim=0).expand_as(cross_matrix) + th.ones_like(cross_matrix) * margin
+    hard_cross_mask = th.where(cross_matrix < max_center_n, th.ones_like(cross_matrix), th.zeros_like(cross_matrix))
+    hard_vector = th.masked_select(cross_matrix, hard_cross_mask.byte())
+    n_hards = len(hard_vector) / batch_person
+    center_loss = th.mean(max_center)
+    cross_loss = th.mean(min_cross)
+
+    return center_loss, cross_loss, center_loss / cross_loss, n_hards
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

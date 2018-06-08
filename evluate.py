@@ -9,7 +9,7 @@ import scipy.io as sio
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('E:\Person_ReID\ReID_metric_learning\checkpoint\\ReID_HardModel196.pt'))
+model.load_state_dict(th.load('E:\Person_ReID\ReID_metric_learning\checkpoint\\\ReID_HardModel16.pt'))
 
 
 def all_diffs(a, b):

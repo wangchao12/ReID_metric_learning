@@ -12,7 +12,8 @@ def imgs_to_pt(path):
     person_list = []
     files = os.listdir(path)
     for i, file_i in enumerate(files):
-        current_id = file_i[0:4]
+        file_i_s = file_i.split('_', len(file_i))
+        current_id = file_i_s[0]
         if current_id == last_id:
             img = cv2.imread(os.path.join(path, file_i))
             person_list.append(img)
@@ -22,7 +23,8 @@ def imgs_to_pt(path):
             person_list = []
             img = cv2.imread(os.path.join(path, file_i))
             person_list.append(img)
-            last_id = file_i[0:4]
+            file_i_s = file_i.split('_', len(file_i))
+            last_id = file_i_s[0]
     final_list = []
     for i, persion_i in enumerate(data_list):
         person_list2 = []
@@ -48,11 +50,14 @@ def img_to_test(path):
 
 if __name__ == '__main__':
     file_path_train1 = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
-    file_path_train2 = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
+    file_path_train2 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64\\'
+    file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
     person_list1 = imgs_to_pt(path=file_path_train1)
     person_list2 = imgs_to_pt(path=file_path_train2)
-    torch.save(person_list1, '.\\traindata.pt')
-    torch.save(person_list2, '.\\testdata.pt')
+    person_list3 = imgs_to_pt(path=file_path_test)
+    train_list = person_list1 + person_list2
+    torch.save(train_list, '.\\traindata.pt')
+    torch.save(person_list3, '.\\testdata.pt')
 
 
 

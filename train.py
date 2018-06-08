@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from SummaryWriter import SummaryWriter
-from Loss2 import CenterEasyLoss4, batch_hard, TripletHardLoss
+from Loss2 import CenterEasyLoss4, CenterEasyLoss5
 ###parameters setting###
 batch_person = 32
 person_size = 8
@@ -21,7 +21,7 @@ writer = SummaryWriter('.\log\log.mat')
 
 model = MobileNetV2().to('cuda')
 model.train()
-model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel196.pt'))
+model.load_state_dict(torch.load('.\checkpoint\pre_train\\ReID_HardModel235.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
 
@@ -37,24 +37,26 @@ for i in range(epoches):
         iter += 1
         batch_x, label = trainloader.next_batch()
         fc = model(torch.cuda.FloatTensor(batch_x))
-        center_loss, cross_loss, loss1 = TripletHardLoss(fc, pids)
+        center_loss, cross_loss, loss1, n_hards = CenterEasyLoss5(fc, pids, batch_person, person_size, scale, margin, 128)
         loss = loss1
         loss.backward()
         optresnet.step()
         writer.write('trainHardLoss', float(loss))
+        writer.write('trainHards', float(n_hards))
         print('train epoch', i, 'iter', j, 'loss', float(loss), 'center_loss',
-              float(center_loss), 'cross_loss', float(cross_loss))
+              float(center_loss), 'cross_loss', float(cross_loss), 'n_hards', n_hards)
     sum_loss = 0
     ###############test stage################################
     for k in range(testloader.num_step):
         test_x, label = testloader.next_batch()
         fc = model.forward(torch.cuda.FloatTensor(test_x))
-        center_loss, cross_loss, loss1 = TripletHardLoss(fc, pids)
+        center_loss, cross_loss, loss1, n_hards = CenterEasyLoss5(fc, pids, batch_person, person_size, scale, margin, 128)
         loss = loss1
         sum_loss = sum_loss + float(loss)
         writer.write('testHardLoss', float(loss))
+        writer.write('testHards', float(n_hards))
         print('test epoch', i, 'iter', k, 'loss', float(loss), 'center_loss',
-              float(center_loss), 'cross_loss', float(cross_loss))
+              float(center_loss), 'cross_loss', float(cross_loss), 'n_hards', n_hards)
     print('min_test_loss', min_test_loss, 'test_loss', sum_loss / testloader.num_step)
     if sum_loss / testloader.num_step < min_test_loss:
         min_test_loss = sum_loss / testloader.num_step
