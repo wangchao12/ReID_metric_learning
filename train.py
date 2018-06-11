@@ -11,7 +11,7 @@ batch_person = 32
 person_size = 8
 epoches = 100000
 margin = 0.1
-scale = 0.5
+scale = 0.
 
 
 trainloader = DataLoader(datafile='.\dataset\\traindata.pt', batch_person=batch_person, person_size=person_size)
