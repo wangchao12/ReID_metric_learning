@@ -87,8 +87,9 @@ class MobileNetV2(nn.Module):
 
         # building classifier
         self.embedding = nn.Sequential(
-
-            nn.Linear(self.last_channel, n_embeddings)
+            nn.Dropout(),
+            nn.Linear(self.last_channel, n_embeddings),
+            nn.Tanh()
         )
         self._initialize_weights()
 

@@ -6,9 +6,9 @@ from SummaryWriter import SummaryWriter
 from Loss import attribute_loss
 ###parameters setting###
 batch_person = 32
-person_size = 8
+person_size = 2
 epoches = 100000
-alpha = 5
+alpha = 15
 
 
 trainloader = DataLoader(datafile='.\dataset\\traindata.pt', batch_person=batch_person, person_size=person_size)
@@ -48,6 +48,8 @@ for i in range(epoches):
         writer.write('testHards', float(n_err))
         print('test epoch', i, 'iter', k, 'loss', float(loss), 'n_err', n_err)
     print('min_test_loss', min_test_loss, 'test_loss', sum_loss / testloader.num_step)
+
+
     if sum_loss / testloader.num_step < min_test_loss:
         min_test_loss = sum_loss / testloader.num_step
         print('**************save model*******************')

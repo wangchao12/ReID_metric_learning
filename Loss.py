@@ -98,12 +98,15 @@ def CenterEasyLoss5(fc, pids, batch_person, num_file, scale, margin, fcs):
 
     return center_loss, cross_loss, center_loss / cross_loss, n_hards
 
-def attribute_loss(fc, label, alpha=20):
+def attribute_loss(fc, label, alpha):
 
     loss_matrix = th.exp(-alpha * (fc * label))
-    loss = th.mean(loss_matrix)
     error_matrix = th.where(loss_matrix > th.ones_like(loss_matrix), th.ones_like(loss_matrix), th.zeros_like(loss_matrix))
-    num_errors = len(th.masked_select(loss_matrix, error_matrix.byte()))
+    loss_all = th.mean(loss_matrix)
+    vector_errors = th.masked_select(loss_matrix, error_matrix.byte())
+    loss_err = th.mean(vector_errors)
+    num_errors = len(vector_errors) / len(fc)
+    loss = loss_all + loss_err
     return loss, num_errors
 
 
