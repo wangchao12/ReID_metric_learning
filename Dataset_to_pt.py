@@ -34,6 +34,39 @@ def imgs_to_pt(path):
         final_list.append(person_list2)
     return final_list
 
+
+def attribute_to_pt(path_imgs, path_attributes):
+    data_list = []
+    last_id = []
+    person_list = []
+    attributes = sio.loadmat(path_attributes)['attribute']
+    files = os.listdir(path_imgs)
+    for i, file_i in enumerate(files):
+        file_i_s = file_i.split('_', len(file_i))
+        current_id = file_i_s[0]
+        if current_id == last_id:
+            img = cv2.imread(os.path.join(path_imgs, file_i))
+            person_list.append(img)
+        else:
+            if len(person_list) > 0:
+                data_list.append(person_list)
+            person_list = []
+            img = cv2.imread(os.path.join(path_imgs, file_i))
+            person_list.append(img)
+            file_i_s = file_i.split('_', len(file_i))
+            last_id = file_i_s[0]
+    final_list = []
+    for persion_i, attribute_i in zip(data_list, attributes):
+        person_list2 = []
+        for file_i in persion_i:
+            dict={'image': file_i, 'attribute': attribute_i}
+            person_list2.append(dict)
+        final_list.append(person_list2)
+    return final_list
+
+
+
+
 def img_to_test(path):
     file_list = []
     files = os.listdir(path)
@@ -49,15 +82,22 @@ def img_to_test(path):
 
 
 if __name__ == '__main__':
-    file_path_train1 = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
-    file_path_train2 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64\\'
+    file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
+    attribute_path_train = 'E:\Person_ReID\ReID_metric_learning\parase_attribure\\attribute_train.mat'
     file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
-    person_list1 = imgs_to_pt(path=file_path_train1)
-    person_list2 = imgs_to_pt(path=file_path_train2)
-    person_list3 = imgs_to_pt(path=file_path_test)
-    train_list = person_list1 + person_list2
-    torch.save(train_list, '.\\traindata.pt')
-    torch.save(person_list3, '.\\testdata.pt')
+    attribute_path_test = 'E:\Person_ReID\ReID_metric_learning\parase_attribure\\attribute_test.mat'
+    attribute_train = attribute_to_pt(path_imgs=file_path_train, path_attributes=attribute_path_train)
+    attribute_test = attribute_to_pt(path_imgs=file_path_test, path_attributes=attribute_path_test)
+    torch.save(attribute_train, '.\\traindata.pt')
+    torch.save(attribute_test, '.\\testdata.pt')
+
+
+    # person_list1 = imgs_to_pt(path=file_path_train1)
+    # person_list3 = imgs_to_pt(path=file_path_test)
+    # train_list = person_list1
+    # torch.save(train_list, '.\\traindata.pt')
+    # torch.save(person_list3, '.\\testdata.pt')
+
 
 
 
