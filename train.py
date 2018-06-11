@@ -5,14 +5,14 @@ import torch
 from SummaryWriter import SummaryWriter
 from Loss import attribute_loss
 ###parameters setting###
-batch_person = 32
-person_size = 2
+
+batch_size = 64
 epoches = 100000
 alpha = 15
 
 
-trainloader = DataLoader(datafile='.\dataset\\traindata.pt', batch_person=batch_person, person_size=person_size)
-testloader = DataLoader(datafile='.\dataset\\testdata.pt', batch_person=batch_person, person_size=person_size)
+trainloader = DataLoader(datafile='.\dataset\\traindata.pt', batch_size=batch_size)
+testloader = DataLoader(datafile='.\dataset\\testdata.pt', batch_size=batch_size)
 writer = SummaryWriter('.\log\log.mat')
 
 

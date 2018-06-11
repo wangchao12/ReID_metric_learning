@@ -62,7 +62,11 @@ def attribute_to_pt(path_imgs, path_attributes):
             dict={'image': file_i, 'attribute': attribute_i}
             person_list2.append(dict)
         final_list.append(person_list2)
-    return final_list
+    attribute_list = []
+    for person_i in final_list:
+        for file_i in person_i:
+            attribute_list.append(file_i)
+    return attribute_list
 
 
 
