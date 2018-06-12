@@ -89,7 +89,8 @@ class MobileNetV2(nn.Module):
         self.embedding = nn.Sequential(
             nn.Dropout(),
             nn.Linear(self.last_channel, n_embeddings),
-            nn.Tanh()
+            nn.Sigmoid(),
+            nn.Softmax()
         )
         self._initialize_weights()
 

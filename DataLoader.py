@@ -8,8 +8,8 @@ import scipy.io as sio
 class DataLoader(object):
     def __init__(self, datafile, batch_size):
         self.person_list = torch.load(datafile)
+        self.shuffle_data()
         self.batch_size = batch_size
-
         self.step = 1
         self.num_step = int(np.ceil(len(self.person_list) / batch_size))
 
