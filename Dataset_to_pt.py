@@ -87,20 +87,20 @@ def img_to_test(path):
 
 if __name__ == '__main__':
     file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
-    attribute_path_train = 'E:\Person_ReID\ReID_metric_learning\parase_attribure\\attribute_train.mat'
+    # attribute_path_train = 'E:\Person_ReID\ReID_metric_learning\parase_attribure\\attribute_train.mat'
     file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test\\'
-    attribute_path_test = 'E:\Person_ReID\ReID_metric_learning\parase_attribure\\attribute_test.mat'
-    attribute_train = attribute_to_pt(path_imgs=file_path_train, path_attributes=attribute_path_train)
-    attribute_test = attribute_to_pt(path_imgs=file_path_test, path_attributes=attribute_path_test)
-    torch.save(attribute_train, '.\\traindata.pt')
-    torch.save(attribute_test, '.\\testdata.pt')
+    # attribute_path_test = 'E:\Person_ReID\ReID_metric_learning\parase_attribure\\attribute_test.mat'
+    # attribute_train = attribute_to_pt(path_imgs=file_path_train, path_attributes=attribute_path_train)
+    # attribute_test = attribute_to_pt(path_imgs=file_path_test, path_attributes=attribute_path_test)
+    # torch.save(attribute_train, '.\\traindata.pt')
+    # torch.save(attribute_test, '.\\testdata.pt')
 
 
-    # person_list1 = imgs_to_pt(path=file_path_train1)
-    # person_list3 = imgs_to_pt(path=file_path_test)
-    # train_list = person_list1
-    # torch.save(train_list, '.\\traindata.pt')
-    # torch.save(person_list3, '.\\testdata.pt')
+    person_list1 = imgs_to_pt(path=file_path_train)
+    person_list3 = imgs_to_pt(path=file_path_test)
+    train_list = person_list1
+    torch.save(train_list, '.\\traindata.pt')
+    torch.save(person_list3, '.\\testdata.pt')
 
 
 
