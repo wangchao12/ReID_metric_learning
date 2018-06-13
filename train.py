@@ -8,7 +8,7 @@ from Loss import attribute_loss
 
 batch_size = 64
 epoches = 100000
-alpha = 1
+alpha = 15
 
 
 trainloader = DataLoader(datafile='.\dataset\\traindata.pt', batch_size=batch_size)
