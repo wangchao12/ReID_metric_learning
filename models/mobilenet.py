@@ -1,7 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
+import torch, cv2
 import math
+import numpy as np
 
 
 def conv_bn(inp, oup, stride):
@@ -70,20 +71,26 @@ class MobileNetV2(nn.Module):
         input_channel = int(32 * width_mult)
         self.last_channel = int(1280 * width_mult) if width_mult > 1.0 else 1280
         self.features = [conv_bn(3, input_channel, 2)]
+        self.mask = [conv_bn(3, input_channel, 2)]
         # building inverted residual blocks
         for t, c, n, s in self.interverted_residual_setting:
             output_channel = int(c * width_mult)
             for i in range(n):
                 if i == 0:
                     self.features.append(InvertedResidual(input_channel, output_channel, s, t))
+                    self.mask.append(InvertedResidual(input_channel, output_channel, s, t))
                 else:
                     self.features.append(InvertedResidual(input_channel, output_channel, 1, t))
+                    self.mask.append(InvertedResidual(input_channel, output_channel, 1, t))
                 input_channel = output_channel
         # building last several layers
         self.features.append(conv_1x1_bn(input_channel, self.last_channel))
+        self.mask.append(conv_1x1_bn(input_channel, self.last_channel))
         self.features.append(nn.AvgPool2d(kernel_size=(8, 4)))
+
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
+        self.mask = nn.Sequential(*self.mask)
 
         # building classifier
         self.embedding = nn.Sequential(
@@ -91,13 +98,30 @@ class MobileNetV2(nn.Module):
             nn.Linear(self.last_channel, n_embeddings),
         )
         self._initialize_weights()
+        self.embedding2 = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(self.last_channel, n_embeddings),
+        )
 
     def forward(self, x):
-        x = self.features(x)
+        x_mask = self.mask(x)
+        mask = np.mean(x_mask.detach().cpu().numpy(), axis=1)
+        thresh = np.expand_dims(np.expand_dims(np.mean(np.mean(mask, -1), -1), axis=1), axis=1)
+        mask = np.where(mask > thresh, np.ones_like(mask).astype(np.uint8), np.zeros_like(mask).astype(np.uint8))
+        mask = np.transpose(cv2.resize(np.transpose(mask, [1, 2, 0]), (64, 128)), [2, 0, 1])
+        mask = torch.unsqueeze(torch.cuda.FloatTensor(mask), dim=1)
+
+        mask_fc = nn.AvgPool2d(kernel_size=(8, 4))(x_mask)
+        mask_fc = mask_fc.view(-1, self.last_channel)
+        mask_fc = self.embedding2(mask_fc)
+        mask_fc = mask_fc / torch.unsqueeze(torch.norm(mask_fc, 2, -1), -1)
+
+        x = self.features(x * mask)
         x = x.view(-1, self.last_channel)
-        embedding = self.embedding(x)
-        embedding = embedding / torch.unsqueeze(torch.norm(embedding, 2, -1), -1)
-        return embedding
+        fc = self.embedding(x)
+        fc = fc / torch.unsqueeze(torch.norm(fc, 2, -1), -1)
+        return mask_fc, fc
+
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -112,3 +136,10 @@ class MobileNetV2(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
+
+
+if __name__ == '__main__':
+    img = cv2.imread('E:\Person_ReID\ReID_metric_learning\\0000_c1s1_000151_01.jpg')
+    img = img.astype(np.int8)
+    img_r = cv2.resize(img[:, :, 0], (128, 64))
+    print()
