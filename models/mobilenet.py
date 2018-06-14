@@ -1,6 +1,6 @@
 import torch.nn as nn
-import torch.nn.functional as F
-import torch, cv2
+import torch as th
+import cv2
 import math
 import numpy as np
 
@@ -105,21 +105,20 @@ class MobileNetV2(nn.Module):
 
     def forward(self, x):
         x_mask = self.mask(x)
-        mask = np.mean(x_mask.detach().cpu().numpy(), axis=1)
-        thresh = np.expand_dims(np.expand_dims(np.mean(np.mean(mask, -1), -1), axis=1), axis=1)
-        mask = np.where(mask > thresh, np.ones_like(mask).astype(np.uint8), np.zeros_like(mask).astype(np.uint8))
-        mask = np.transpose(cv2.resize(np.transpose(mask, [1, 2, 0]), (64, 128)), [2, 0, 1])
-        mask = torch.unsqueeze(torch.cuda.FloatTensor(mask), dim=1)
+        mask = th.mean(x_mask, dim=1, keepdim=True)
+        thresh = th.unsqueeze(th.mean(th.mean(mask, -1), -1, keepdim=True), -1)
+        mask = th.where(mask > thresh, th.ones_like(mask), th.zeros_like(mask))
+        mask = nn.UpsamplingBilinear2d(scale_factor=16)(mask)
 
         mask_fc = nn.AvgPool2d(kernel_size=(8, 4))(x_mask)
         mask_fc = mask_fc.view(-1, self.last_channel)
         mask_fc = self.embedding2(mask_fc)
-        mask_fc = mask_fc / torch.unsqueeze(torch.norm(mask_fc, 2, -1), -1)
+        mask_fc = mask_fc / th.unsqueeze(th.norm(mask_fc, 2, -1), -1)
 
         x = self.features(x * mask)
         x = x.view(-1, self.last_channel)
         fc = self.embedding(x)
-        fc = fc / torch.unsqueeze(torch.norm(fc, 2, -1), -1)
+        fc = fc / th.unsqueeze(th.norm(fc, 2, -1), -1)
         return mask_fc, fc
 
 
