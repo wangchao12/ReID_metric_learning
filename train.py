@@ -8,7 +8,7 @@ from SummaryWriter import SummaryWriter
 from Loss import CenterEasyLoss4, CenterEasyLoss5
 ###parameters setting###
 batch_person = 16
-person_size = 8
+person_size = 16
 epoches = 100000
 margin = 0.1
 scale = 0.5
@@ -21,7 +21,7 @@ writer = SummaryWriter('.\log\log.mat')
 
 model = MobileNetV2().to('cuda')
 model.train()
-model.load_state_dict(torch.load('.\checkpoint\\\ReID_HardModel166.pt'))
+model.load_state_dict(torch.load('.\checkpoint\\\ReID_HardModel202.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
 
@@ -61,7 +61,7 @@ for i in range(epoches):
         writer.write('testHards', float(n_hards))
         print('test epoch', i, 'iter', k, 'loss', float(loss), 'center_loss',
               float(center_loss), 'cross_loss', float(cross_loss), 'n_hards', n_hards)
-        print('test epoch', i, 'iter', j, 'loss', float(loss), 'center_loss_m',
+        print('test epoch', i, 'iter', k, 'loss', float(loss), 'center_loss_m',
               float(center_loss_m), 'cross_loss_m', float(cross_loss_m), 'n_hards_m', n_hards_m)
     print('min_test_loss', min_test_loss, 'test_loss', sum_loss / testloader.num_step)
     if sum_loss / testloader.num_step < min_test_loss:

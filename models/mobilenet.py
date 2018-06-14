@@ -57,19 +57,18 @@ class MobileNetV2(nn.Module):
         # setting of inverted residual blocks
         self.interverted_residual_setting = [
             # t, c, n, s
-            [1, 16, 1, 1],
+            [1, 16, 1, 2],
             [6, 24, 2, 2],
             [6, 32, 3, 2],
-            [6, 64, 4, 2],
+            [6, 64, 4, 1],
             [6, 96, 3, 1],
-            [6, 160, 3, 1],
-            [6, 320, 1, 1],
+            [6, 160, 3, 1]
         ]
 
         # building first layer
         assert input_size % 32 == 0
         input_channel = int(32 * width_mult)
-        self.last_channel = int(1280 * width_mult) if width_mult > 1.0 else 1280
+        self.last_channel = int(320 * width_mult) if width_mult > 1.0 else 320
         self.features = [conv_bn(3, input_channel, 2)]
         self.mask = [conv_bn(3, input_channel, 2)]
         # building inverted residual blocks
