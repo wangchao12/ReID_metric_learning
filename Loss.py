@@ -54,7 +54,7 @@ def CenterEasyLoss3(fc, batch_person, num_file, scale, fcs):
 
 
 
-def CenterEasyLoss4(fc, pids, batch_person, num_file, scale, margin, fcs):
+def CenterEasyLoss4(fc, pids, batch_person, num_file, scale, margin, fcs=128):
     center_loss, cross_mean_loss, loss = CenterEasyLoss3(fc, batch_person, num_file, scale, fcs)
 
     person_center = th.unsqueeze(th.mean(input=fc.view(batch_person, num_file, fcs), dim=1), dim=0)
@@ -103,6 +103,11 @@ def attribute_loss(fc, label, alpha):
     loss = -th.mean(label * th.log(fc) + (th.ones_like(label) - label) * th.log(th.ones_like(fc) - fc))
     num_errors = 0
     return loss, num_errors
+
+def MSE_loss(fc, fc_target):
+    target = th.cuda.FloatTensor(fc_target.detach().cpu().numpy())
+    loss = th.mean(th.norm(fc - target, -1))
+    return loss
 
 
 

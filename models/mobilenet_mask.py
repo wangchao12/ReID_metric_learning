@@ -55,6 +55,7 @@ class MobileNetV2(nn.Module):
     def __init__(self, n_embeddings=128, input_size=128, width_mult=1.):
         super(MobileNetV2, self).__init__()
         # setting of inverted residual blocks
+        self.n_embeddings = n_embeddings
         self.interverted_residual_setting = [
             # t, c, n, s
             [1, 16, 1, 2],
@@ -82,22 +83,24 @@ class MobileNetV2(nn.Module):
                 input_channel = output_channel
         # building last several layers
         self.features.append(conv_1x1_bn(input_channel, self.last_channel))
-        self.features.append(nn.AvgPool2d(8, 4))
+        # self.features.append(nn.AvgPool2d(8, 4))
 
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
-
         # building classifier
         self.embedding = nn.Sequential(
-            nn.Linear(self.last_channel, 2),
-            nn.Sigmoid()
+            nn.Linear(self.last_channel, n_embeddings),
         )
 
 
-    def forward(self, x):
-        x = self.features(x)
+    def forward(self, img):
+        mask_x = self.features(img)
+        x = nn.AvgPool2d(kernel_size=(8, 4))(mask_x)
+        x = x.view(-1, self.last_channel)
         fc = self.embedding(x)
-        return fc
+        mask = self.masknet(mask_x)
+        fc = fc / th.unsqueeze(th.norm(fc, 2, -1), -1)
+        return fc, mask
 
     def _initialize_weights(self):
         for m in self.modules():

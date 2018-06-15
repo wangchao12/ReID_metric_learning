@@ -93,13 +93,13 @@ if __name__ == '__main__':
     file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test'
 
 
-    train_list1 = person_to_pt(path=file_path_train, label=1)
-    test_list = person_to_pt(path=file_path_test, label=0)
+    train_list1 = imgs_to_pt(path=file_path_train)
+    test_list = imgs_to_pt(path=file_path_test)
 
 
 
-    torch.save(train_list, '.\\person_traindata.pt')
-    torch.save(test_list, '.\\person_testdata.pt')
+    torch.save(train_list1, '.\\traindata.pt')
+    torch.save(test_list, '.\\testdata.pt')
 
 
 
