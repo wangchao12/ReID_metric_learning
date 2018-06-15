@@ -35,38 +35,38 @@ def imgs_to_pt(path):
     return final_list
 
 
-def attribute_to_pt(path_imgs, path_attributes):
+def person_to_pt(path, label):
     data_list = []
     last_id = []
     person_list = []
-    attributes = sio.loadmat(path_attributes)['attribute']
-    files = os.listdir(path_imgs)
+    files = os.listdir(path)
     for i, file_i in enumerate(files):
         file_i_s = file_i.split('_', len(file_i))
         current_id = file_i_s[0]
         if current_id == last_id:
-            img = cv2.imread(os.path.join(path_imgs, file_i))
+            img = cv2.imread(os.path.join(path, file_i))
             person_list.append(img)
         else:
             if len(person_list) > 0:
                 data_list.append(person_list)
             person_list = []
-            img = cv2.imread(os.path.join(path_imgs, file_i))
+            img = cv2.imread(os.path.join(path, file_i))
             person_list.append(img)
             file_i_s = file_i.split('_', len(file_i))
             last_id = file_i_s[0]
     final_list = []
-    for persion_i, attribute_i in zip(data_list, attributes):
+    for persion_i in data_list:
         person_list2 = []
         for file_i in persion_i:
-            dict={'image': file_i, 'attribute': attribute_i}
+            dict={'image': file_i, 'label': label}
             person_list2.append(dict)
         final_list.append(person_list2)
     attribute_list = []
     for person_i in final_list:
         for file_i in person_i:
             attribute_list.append(file_i)
-    return attribute_list
+    return final_list
+
 
 
 
@@ -93,16 +93,13 @@ if __name__ == '__main__':
     file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test'
 
 
-    train_list1 = imgs_to_pt(path=file_path_train)
-    train_list2 = imgs_to_pt(path=file_path_train2)
-    train_list3 = imgs_to_pt(path=file_path_train3)
-    train_list4 = imgs_to_pt(path=file_path_train4)
-    test_list = imgs_to_pt(path=file_path_test)
-    train_list = train_list2 + train_list1 + train_list3 + train_list4
+    train_list1 = person_to_pt(path=file_path_train, label=1)
+    test_list = person_to_pt(path=file_path_test, label=0)
 
 
-    torch.save(train_list, '.\\traindata.pt')
-    torch.save(test_list, '.\\testdata.pt')
+
+    torch.save(train_list, '.\\person_traindata.pt')
+    torch.save(test_list, '.\\person_testdata.pt')
 
 
 
