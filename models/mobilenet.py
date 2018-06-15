@@ -62,63 +62,73 @@ class MobileNetV2(nn.Module):
             [6, 32, 3, 2],
             [6, 64, 4, 1],
             [6, 96, 3, 1],
-            [6, 160, 3, 1]
+            [6, 160, 3, 1],
+            [6, 320, 1, 1],
         ]
 
         # building first layer
         assert input_size % 32 == 0
         input_channel = int(32 * width_mult)
-        self.last_channel = int(320 * width_mult) if width_mult > 1.0 else 320
+        self.last_channel = int(1280 * width_mult) if width_mult > 1.0 else 1280
         self.features = [conv_bn(3, input_channel, 2)]
-        self.mask = [conv_bn(3, input_channel, 2)]
+        self.branch = [conv_bn(3, input_channel, 2)]
         # building inverted residual blocks
         for t, c, n, s in self.interverted_residual_setting:
             output_channel = int(c * width_mult)
             for i in range(n):
                 if i == 0:
                     self.features.append(InvertedResidual(input_channel, output_channel, s, t))
-                    self.mask.append(InvertedResidual(input_channel, output_channel, s, t))
+                    self.branch.append(InvertedResidual(input_channel, output_channel, s, t))
                 else:
                     self.features.append(InvertedResidual(input_channel, output_channel, 1, t))
-                    self.mask.append(InvertedResidual(input_channel, output_channel, 1, t))
+                    self.branch.append(InvertedResidual(input_channel, output_channel, 1, t))
                 input_channel = output_channel
         # building last several layers
         self.features.append(conv_1x1_bn(input_channel, self.last_channel))
-        self.mask.append(conv_1x1_bn(input_channel, self.last_channel))
-        self.features.append(nn.AvgPool2d(kernel_size=(8, 4)))
+        self.branch.append(conv_1x1_bn(input_channel, self.last_channel))
+        self.branch.append(nn.AvgPool2d(kernel_size=(8, 4)))
 
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
-        self.mask = nn.Sequential(*self.mask)
+        self.branch = nn.Sequential(*self.branch)
 
         # building classifier
         self.embedding = nn.Sequential(
-            nn.Dropout(),
             nn.Linear(self.last_channel, n_embeddings),
         )
         self._initialize_weights()
         self.embedding2 = nn.Sequential(
-            nn.Dropout(),
             nn.Linear(self.last_channel, n_embeddings),
+        )
+        self.embedding3 = nn.Sequential(
+            nn.Linear(n_embeddings * 2, n_embeddings),
         )
 
     def forward(self, x):
-        x_mask = self.mask(x)
+        x_mask = self.features(x)
         mask = th.mean(x_mask, dim=1, keepdim=True)
         thresh = th.unsqueeze(th.mean(th.mean(mask, -1), -1, keepdim=True), -1)
+        mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
         mask = th.where(mask > thresh, th.ones_like(mask), th.zeros_like(mask))
-        mask = nn.UpsamplingBilinear2d(scale_factor=16)(mask)
 
-        mask_fc = nn.AvgPool2d(kernel_size=(8, 4))(x_mask)
-        mask_fc = mask_fc.view(-1, self.last_channel)
-        mask_fc = self.embedding2(mask_fc)
+
+
+        fc = nn.AvgPool2d(kernel_size=(8, 4))(x_mask)
+        fc = fc.view(-1, self.last_channel)
+        fc = self.embedding2(fc)
+        fc = fc / th.unsqueeze(th.norm(fc, 2, -1), -1)
+
+        mask_img = x * mask
+        x = self.branch(x * mask)
+        x = x.view(-1, self.last_channel)
+        mask_fc = self.embedding(x)
         mask_fc = mask_fc / th.unsqueeze(th.norm(mask_fc, 2, -1), -1)
 
-        x = self.features(x * mask)
-        x = x.view(-1, self.last_channel)
-        fc = self.embedding(x)
-        fc = fc / th.unsqueeze(th.norm(fc, 2, -1), -1)
-        return mask_fc, fc
+        concat_fc = th.cat((fc, mask_fc), -1)
+        concat_fc = self.embedding3(concat_fc)
+        concat_fc = concat_fc / th.unsqueeze(th.norm(concat_fc, 2, -1), -1)
+
+        return mask_fc, fc, concat_fc, mask_img
 
 
     def _initialize_weights(self):
