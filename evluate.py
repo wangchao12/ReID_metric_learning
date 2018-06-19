@@ -1,6 +1,5 @@
-from models.mobilenet import MobileNetV2
+from models.mobilenet_mask import MobileNetV2
 import torch as th
-import numpy as np
 import time
 import numpy as np
 import scipy.io as sio
@@ -9,7 +8,7 @@ import scipy.io as sio
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel24.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel26.pt'))
 
 
 def all_diffs(a, b):
@@ -46,14 +45,10 @@ def extract_fc(query, name):
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            mask_fc, fc, cat_fc = model(th.cuda.FloatTensor(img2))
+            fc, _ = model(th.cuda.FloatTensor(img2))
             t2 = time.time()
             dict_i = {'img': img, 'fc': fc.cpu().detach().numpy(), 'id': id}
-            dict_i_m = {'img': img, 'fc': mask_fc.cpu().detach().numpy(), 'id': id}
-            dict_i_cat = {'img': img, 'fc': cat_fc.cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
-            query_list_m.append(dict_i_m)
-            query_list_c.append(dict_i_cat)
             print(idx, 'time:', t2 - t1)
         except:
             continue
@@ -93,10 +88,7 @@ if __name__ =='__main__':
     query_fc, query_fc_m, query_fc_c = extract_fc(query, 'query')
     sio.savemat('./evulate/query_fc.mat', query_fc)
     sio.savemat('./evulate/gallary_fc.mat', gallary_fc)
-    sio.savemat('./evulate/query_fc_m.mat', query_fc_m)
-    sio.savemat('./evulate/gallary_fc_m.mat', gallary_fc_m)
-    sio.savemat('./evulate/query_fc_c.mat', query_fc_c)
-    sio.savemat('./evulate/gallary_fc_c.mat', gallary_fc_c)
+
 
 
 #     model = MobileNetV2().to('cuda')

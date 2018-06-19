@@ -3,11 +3,15 @@ import numpy as np
 import random
 import math
 import scipy.io as sio
+from Dataset_to_pt import imgs_to_pt
 
 
 class DataLoader(object):
     def __init__(self, datafile, batch_person, person_size):
-        self.person_list = torch.load(datafile)
+        self.person_list = []
+        for path_i in datafile:
+            file_list = imgs_to_pt(path_i)
+            self.person_list = self.person_list + file_list
         self.bp = batch_person
         self.ps = person_size
         self.step = 1

@@ -86,19 +86,26 @@ def img_to_test(path):
 
 
 if __name__ == '__main__':
-    file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
-    file_path_train2 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64\\'
-    file_path_train3 = 'E:\Person_ReID\DataSet\cuhk03_release\labeled\\'
-    file_path_train4 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64\\'
+    file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train_mask\\'
+    file_path_train2 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64_mask\\'
+    file_path_train3 = 'E:\Person_ReID\DataSet\cuhk03_release\labeled_mask\\'
+    file_path_train4 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64_mask\\'
     file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test'
 
 
     train_list1 = imgs_to_pt(path=file_path_train)
+    print('1')
+    train_list2 = imgs_to_pt(path=file_path_train2)
+    print('2')
+    train_list3 = imgs_to_pt(path=file_path_train3)
+    print('3')
+    train_list4 = imgs_to_pt(path=file_path_train4)
+    print('4')
+    train_list = train_list1 + train_list2 + train_list3 + train_list4
     test_list = imgs_to_pt(path=file_path_test)
-
-
-
-    torch.save(train_list1, '.\\traindata.pt')
+    print('5')
+    torch.save(train_list, '.\\traindata.pt')
+    print('6')
     torch.save(test_list, '.\\testdata.pt')
 
 

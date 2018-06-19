@@ -88,19 +88,26 @@ class MobileNetV2(nn.Module):
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
         # building classifier
+        self.L1 = nn.Linear(self.last_channel, n_embeddings)
         self.embedding = nn.Sequential(
-            nn.Linear(self.last_channel, n_embeddings),
+           self.L1
         )
 
 
     def forward(self, img):
         mask_x = self.features(img)
-        x = nn.AvgPool2d(kernel_size=(8, 4))(mask_x)
+        # mask_weight = th.unsqueeze(th.unsqueeze(self.L1.weight, -1), -1)
+        mask = th.mean(th.sum(mask_x, dim=1, keepdim=True), dim=0, keepdim=True)
+        thresh = th.unsqueeze(th.unsqueeze(1.1*th.mean(th.mean(mask, -1), -1), -1), -1)
+        mask = th.where(mask > thresh, th.zeros_like(mask), th.ones_like(mask))
+        mask = th.nn.Upsample(scale_factor=16, mode='bilinear')(mask)
+        mask_img = img * mask
+
+        x = nn.AvgPool2d((8, 4))(mask_x)
         x = x.view(-1, self.last_channel)
         fc = self.embedding(x)
-        mask = self.masknet(mask_x)
         fc = fc / th.unsqueeze(th.norm(fc, 2, -1), -1)
-        return fc, mask
+        return fc, mask_img
 
     def _initialize_weights(self):
         for m in self.modules():

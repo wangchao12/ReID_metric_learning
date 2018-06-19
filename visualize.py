@@ -18,18 +18,18 @@ class VisualizeMask(object):
         files = [i for i in os.listdir(self.input)[0:-1]]
         for img_i, name_i in zip(imgs, files):
             _, mask_img = self.model(th.cuda.FloatTensor(img_i))
-            mask_img = np.transpose(mask_img.detach().cpu().numpy()[0, :, :, :], [1, 2, 0])
-            input_img = np.transpose(img_i[0, :, :, :], [1, 2, 0])
-            fileName = os.path.join(self.output, name_i)
-            cv2.imwrite(fileName, mask_img * input_img)
+            mask_img = np.transpose(mask_img.detach().cpu().numpy(), [0, 2, 3, 1])
+            for id, mask_i in enumerate(mask_img):
+              fileName = os.path.join(self.output, name_i[0:-4] + '_' + str(id) + '.jpg')
+              cv2.imwrite(fileName, mask_i)
 
 
 
 
 if __name__ == '__main__':
     model = MobileNetV2().to('cuda')
-    model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel9.pt'))
-    input = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\query_128_64\\'
-    output = 'E:\Person_ReID\ReID_metric_learning\\visualize\mask_query\\'
+    model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel26.pt'))
+    input = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64\\'
+    output = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64_mask\\'
     visualizer = VisualizeMask(input, output, model)
     visualizer.save_img()

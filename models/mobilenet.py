@@ -86,7 +86,6 @@ class MobileNetV2(nn.Module):
         # building last several layers
         self.features.append(conv_1x1_bn(input_channel, self.last_channel))
         self.branch.append(conv_1x1_bn(input_channel, self.last_channel))
-        self.branch.append(nn.AvgPool2d(kernel_size=(8, 4)))
 
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
@@ -96,39 +95,18 @@ class MobileNetV2(nn.Module):
         self.embedding = nn.Sequential(
             nn.Linear(self.last_channel, n_embeddings),
         )
-        self._initialize_weights()
-        self.embedding2 = nn.Sequential(
-            nn.Linear(self.last_channel, n_embeddings),
-        )
-        self.embedding3 = nn.Sequential(
-            nn.Linear(n_embeddings * 2, n_embeddings),
-        )
 
-    def forward(self, x):
-        x_mask = self.features(x)
+    def forward(self, input):
+        x_mask = self.features(input)
         mask = th.mean(x_mask, dim=1, keepdim=True)
         thresh = th.unsqueeze(th.mean(th.mean(mask, -1), -1, keepdim=True), -1)
         mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
         mask = th.where(mask > thresh, th.ones_like(mask), th.zeros_like(mask))
 
+        fc = nn.AvgPool2d(kernel_size=(4, 2), stride=2)(x_mask)
+        fc = fc.view(-1, self.last_channel * 4)
 
-
-        fc = nn.AvgPool2d(kernel_size=(8, 4))(x_mask)
-        fc = fc.view(-1, self.last_channel)
-        fc = self.embedding2(fc)
-        fc = fc / th.unsqueeze(th.norm(fc, 2, -1), -1)
-
-        mask_img = x * mask
-        x = self.branch(x * mask)
-        x = x.view(-1, self.last_channel)
-        mask_fc = self.embedding(x)
-        mask_fc = mask_fc / th.unsqueeze(th.norm(mask_fc, 2, -1), -1)
-
-        concat_fc = th.cat((fc, mask_fc), -1)
-        concat_fc = self.embedding3(concat_fc)
-        concat_fc = concat_fc / th.unsqueeze(th.norm(concat_fc, 2, -1), -1)
-
-        return mask_fc, fc, concat_fc, mask_img
+        return fc
 
 
     def _initialize_weights(self):
