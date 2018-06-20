@@ -1,4 +1,4 @@
-from models.mobilenet_mask import MobileNetV2
+from models.mobilenet_cat import MobileNetV2
 import torch as th
 import time
 import numpy as np
@@ -8,7 +8,7 @@ import scipy.io as sio
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel26.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel82.pt'))
 
 
 def all_diffs(a, b):

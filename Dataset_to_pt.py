@@ -6,7 +6,7 @@ import scipy.io as sio
 
 
 
-def imgs_to_pt(path):
+def imgs_to_pt(path, key=0):
     data_list = []
     last_id = []
     person_list = []
@@ -29,7 +29,7 @@ def imgs_to_pt(path):
     for i, persion_i in enumerate(data_list):
         person_list2 = []
         for file_i in persion_i:
-            dict={'image': file_i, 'id': i}
+            dict={'image': file_i, 'id': i+key}
             person_list2.append(dict)
         final_list.append(person_list2)
     return final_list

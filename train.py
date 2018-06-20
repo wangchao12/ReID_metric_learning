@@ -1,5 +1,5 @@
 from DataLoader import DataLoader
-from models.mobilenet_mask import *
+from models.mobilenet_cat import *
 import torch.optim as optim
 import torch
 import torch.nn as nn
@@ -14,10 +14,10 @@ epoches = 100000
 margin = 0.1
 scale = 0.5
 
-trainList = ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train_mask\\',
-             'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64_mask\\',
-             'E:\Person_ReID\DataSet\cuhk03_release\labeled_mask\\',
-             'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64_mask\\']
+trainList = ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\',
+             'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64\\',
+             'E:\Person_ReID\DataSet\cuhk03_release\labeled\\',
+             'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64\\']
 testList = ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test']
 
 trainloader = DataLoader(datafile=trainList, batch_person=batch_person, person_size=person_size)
@@ -26,9 +26,7 @@ writer = SummaryWriter('.\log\log.mat')
 
 
 model = MobileNetV2().to('cuda')
-model_mask = MobileNetV2().to('cuda')
 model.train()
-model_mask.eval()
 # model_mask.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel10.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
@@ -44,14 +42,16 @@ for i in range(epoches):
     for j in range(trainloader.num_step):
         iter += 1
         batch_x, label = trainloader.next_batch()
-        _, mask_batch = model_mask(torch.cuda.FloatTensor(batch_x))
-        fc, _ = model(mask_batch)
-        center_loss, cross_loss, loss, n_hards = CenterEasyLoss4(fc, pids, batch_person, person_size, scale, margin)
+        fc, cls = model(torch.cuda.FloatTensor(batch_x))
+        loss_cls = nn.CrossEntropyLoss()(cls, torch.cuda.LongTensor(label))
+        center_loss, cross_loss, loss_tri, n_hards = CenterEasyLoss4(fc, pids, batch_person, person_size, scale, margin)
+        loss = loss_cls + loss_tri
         loss.backward()
         optresnet.step()
-        writer.write('trainLoss', float(loss))
+        writer.write('trainLossCls', float(loss_cls))
+        writer.write('trainLossTri', float(loss_tri))
         writer.write('trainhards', float(n_hards))
-        print('train epoch', i, 'iter', j, 'loss_g', float(loss), 'center_loss',
+        print('train epoch', i, 'iter', j, 'loss', float(loss), 'center_loss',
               float(center_loss), 'cross_loss', float(cross_loss), 'n_hards', n_hards)
 
     sum_loss = 0

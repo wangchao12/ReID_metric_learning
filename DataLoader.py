@@ -10,12 +10,13 @@ class DataLoader(object):
     def __init__(self, datafile, batch_person, person_size):
         self.person_list = []
         for path_i in datafile:
-            file_list = imgs_to_pt(path_i)
+            file_list = imgs_to_pt(path_i, len(self.person_list))
             self.person_list = self.person_list + file_list
         self.bp = batch_person
         self.ps = person_size
         self.step = 1
         self.num_step = int(np.ceil(len(self.person_list) / batch_person))
+        self.shuffle_data()
 
     def shuffle_data(self):
         random.shuffle(self.person_list)
