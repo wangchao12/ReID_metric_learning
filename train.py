@@ -1,5 +1,5 @@
 from DataLoader import DataLoader
-from models.mobilenet_cat import *
+from models.mobilenet_multiway import *
 import torch.optim as optim
 import torch
 import torch.nn as nn
@@ -8,16 +8,16 @@ from SummaryWriter import SummaryWriter
 from Loss import CenterEasyLoss4, CenterEasyLoss5
 
 ###parameters setting###
-batch_person = 16
+batch_person = 8
 person_size = 16
 epoches = 100000
 margin = 0.1
 scale = 0.5
 
-trainList = ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\',
-             'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64\\',
-             'E:\Person_ReID\DataSet\cuhk03_release\labeled\\',
-             'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64\\']
+trainList = ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\']
+             # 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64\\',
+             # 'E:\Person_ReID\DataSet\cuhk03_release\labeled\\',
+             # 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64\\']
 testList = ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test']
 
 trainloader = DataLoader(datafile=trainList, batch_person=batch_person, person_size=person_size)
@@ -42,14 +42,19 @@ for i in range(epoches):
     for j in range(trainloader.num_step):
         iter += 1
         batch_x, label = trainloader.next_batch()
-        fc, cls = model(torch.cuda.FloatTensor(batch_x))
-        loss_cls = nn.CrossEntropyLoss()(cls, torch.cuda.LongTensor(label))
-        center_loss, cross_loss, loss_tri, n_hards = CenterEasyLoss4(fc, pids, batch_person, person_size, scale, margin)
-        loss = loss_cls + loss_tri
+        global_emb, global_cls, sub1_emb, sub1_cls, sub2_emb, sub2_cls, all_emb = model(torch.cuda.FloatTensor(batch_x))
+        loss_global_cls = nn.CrossEntropyLoss()(global_cls, torch.cuda.LongTensor(label))
+        loss_subl_cls = nn.CrossEntropyLoss()(sub1_cls, torch.cuda.LongTensor(label))
+        loss_sub2_cls = nn.CrossEntropyLoss()(sub2_cls, torch.cuda.LongTensor(label))
+        _, _, loss_tri_global, _ = CenterEasyLoss4(global_emb, pids, batch_person, person_size, scale, margin)
+        _, _, loss_tri_sub1, _ = CenterEasyLoss4(sub1_emb, pids, batch_person, person_size, scale, margin)
+        _, _, loss_tri_sub2, _ = CenterEasyLoss4(sub2_emb, pids, batch_person, person_size, scale, margin)
+        center_loss, cross_loss, loss_tri_all, n_hards = CenterEasyLoss4(all_emb, pids, batch_person, person_size, scale, margin, fcs=384)
+        loss = loss_global_cls + loss_subl_cls + loss_sub2_cls + loss_tri_global + loss_tri_sub1 + loss_tri_sub2 + loss_tri_all
         loss.backward()
         optresnet.step()
-        writer.write('trainLossCls', float(loss_cls))
-        writer.write('trainLossTri', float(loss_tri))
+        writer.write('trainLossCls', float(loss))
+        writer.write('trainLossTri', float(loss_tri_all))
         writer.write('trainhards', float(n_hards))
         print('train epoch', i, 'iter', j, 'loss', float(loss), 'center_loss',
               float(center_loss), 'cross_loss', float(cross_loss), 'n_hards', n_hards)
@@ -58,8 +63,8 @@ for i in range(epoches):
     ###############test stage################################
     for k in range(testloader.num_step):
         test_x, label = testloader.next_batch()
-        fc, mask = model(torch.cuda.FloatTensor(test_x))
-        center_loss, cross_loss, loss, n_hards = CenterEasyLoss4(fc, pids, batch_person, person_size, scale, margin)
+        _, _, _, _, _, _, all_emb = model(torch.cuda.FloatTensor(test_x))
+        center_loss, cross_loss, loss, n_hards = CenterEasyLoss4(all_emb, pids, batch_person, person_size, scale, margin, fcs=384)
         writer.write('testLoss', float(loss))
         writer.write('testHards', float(n_hards))
         print('test epoch', i, 'iter', k, 'loss', float(loss), 'center_loss',
