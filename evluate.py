@@ -1,14 +1,15 @@
-from models.mobilenet_cat import MobileNetV2
+from models.mobilenet_multiway import MobileNetV2
 import torch as th
 import time
 import numpy as np
 import scipy.io as sio
+from Dataset_to_pt import img_to_test
 
 
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel82.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel3.pt'))
 
 
 def all_diffs(a, b):
@@ -45,7 +46,7 @@ def extract_fc(query, name):
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            fc, _ = model(th.cuda.FloatTensor(img2))
+            _, _, _, _, _, _, fc = model(th.cuda.FloatTensor(img2))
             t2 = time.time()
             dict_i = {'img': img, 'fc': fc.cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
@@ -81,13 +82,21 @@ def extract_fc_acc(query, name, batch_size):
     return {name: query_list}, {name: query_list_m}, {name: query_list_c}
 
 if __name__ =='__main__':
-    query = th.load('.\evulate\query.pt')
-    gallary = th.load('.\evulate\gallary.pt')
+    gallary_path = ['E:\Person_ReID\DataSet\SmartVision_test_dataset\subway\gallary_128_64',
+                    'E:\Person_ReID\DataSet\SmartVision_test_dataset\detected_ped_images\gallary',
+                    'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test']
+
+    query_path = ['E:\Person_ReID\DataSet\SmartVision_test_dataset\subway\query_128_64',
+                  'E:\Person_ReID\DataSet\SmartVision_test_dataset\detected_ped_images\query',
+                  'E:\Person_ReID\DataSet\Market-1501-v15.09.15\query']
+    query_list = img_to_test(query_path[1])
+    gallary_list = img_to_test(gallary_path[1])
+
     print('*********************************')
-    gallary_fc, gallary_fc_m, gallary_fc_c = extract_fc(gallary, 'gallary')
-    query_fc, query_fc_m, query_fc_c = extract_fc(query, 'query')
-    sio.savemat('./evulate/query_fc.mat', query_fc)
-    sio.savemat('./evulate/gallary_fc.mat', gallary_fc)
+    gallary_fc, gallary_fc_m, gallary_fc_c = extract_fc(gallary_list, 'gallary')
+    query_fc, query_fc_m, query_fc_c = extract_fc(query_list, 'query')
+    sio.savemat('./evulate/query_xuchang.mat', query_fc)
+    sio.savemat('./evulate/gallary_xuchang.mat', gallary_fc)
 
 
 

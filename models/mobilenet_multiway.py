@@ -64,7 +64,7 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV2(nn.Module):
-    def __init__(self, n_embeddings=128, input_size=128, width_mult=1., n_person=750):
+    def __init__(self, n_embeddings=128, input_size=128, width_mult=1., n_person=4100):
         super(MobileNetV2, self).__init__()
         # setting of inverted residual blocks
         self.n_embeddings = n_embeddings

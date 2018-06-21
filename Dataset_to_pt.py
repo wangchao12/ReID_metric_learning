@@ -86,39 +86,39 @@ def img_to_test(path):
 
 
 if __name__ == '__main__':
-    file_path_train = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train_mask\\'
-    file_path_train2 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64_mask\\'
-    file_path_train3 = 'E:\Person_ReID\DataSet\cuhk03_release\labeled_mask\\'
-    file_path_train4 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64_mask\\'
-    file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test'
+    # file_path_train = 'E:\Person_ReID\DataSet\智慧视通测试数据\青年南换乘通道\gallary_128_64\\'
+    # file_path_train2 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64_mask\\'
+    # file_path_train3 = 'E:\Person_ReID\DataSet\cuhk03_release\labeled_mask\\'
+    # file_path_train4 = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64_mask\\'
+    # file_path_test = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_test'
+    # train_list1 = imgs_to_pt(path=file_path_train)
+    # print('1')
+    # train_list2 = imgs_to_pt(path=file_path_train2)
+    # print('2')
+    # train_list3 = imgs_to_pt(path=file_path_train3)
+    # print('3')
+    # train_list4 = imgs_to_pt(path=file_path_train4)
+    # print('4')
+    # train_list = train_list1 + train_list2 + train_list3 + train_list4
+    # test_list = imgs_to_pt(path=file_path_test)
+    # print('5')
+    # torch.save(train_list, '.\\traindata.pt')
+    # print('6')
+    # torch.save(test_list, '.\\testdata.pt')
+
+    # print(np.shape(person_list))
+    query_path = 'E:\Person_ReID\DataSet\SmartVision_test_dataset\subway\query_128_64\\'
+    gallary_path = 'E:\Person_ReID\DataSet\SmartVision_test_dataset\subway\gallary_128_64\\'
+    gallary_list = img_to_test(gallary_path)
+    query_list = img_to_test(query_path)
+    torch.save(gallary_list, 'gallary_subway.pt')
+    torch.save(query_list, 'query_subway.pt')
+
+    # tl1 = torch.load('gallary_subway.pt')
+    # print()
 
 
-    train_list1 = imgs_to_pt(path=file_path_train)
-    print('1')
-    train_list2 = imgs_to_pt(path=file_path_train2)
-    print('2')
-    train_list3 = imgs_to_pt(path=file_path_train3)
-    print('3')
-    train_list4 = imgs_to_pt(path=file_path_train4)
-    print('4')
-    train_list = train_list1 + train_list2 + train_list3 + train_list4
-    test_list = imgs_to_pt(path=file_path_test)
-    print('5')
-    torch.save(train_list, '.\\traindata.pt')
-    print('6')
-    torch.save(test_list, '.\\testdata.pt')
 
-
-
-
-
-    # # print(np.shape(person_list))
-    # query_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\query\\'
-    # gallary_path = 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\'
-    # # query_list = img_to_test(query_path)
-    # train_list = img_to_test(gallary_path)
-    # # torch.save(query_list, 'query.pt')
-    # torch.save(train_list, 'train.pt')
 
 
 
