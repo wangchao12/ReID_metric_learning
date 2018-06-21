@@ -61,7 +61,11 @@ def extract_fc_acc(query, name, batch_size):
     query_list = [];query_list_m = [];query_list_c = []
     num_steps = np.floor(len(query) / batch_size)
     for i in range(num_steps):
-        start = i * batch_size; stop = (i + 1) * batch_size -1
+        start = i * batch_size; stop = (i + 1) * batch_size - 1
+        query_list = query[start:stop]
+        # for img in
+
+
     for idx, query_i in enumerate(query):
         try:
             img = query_i['image']
@@ -92,7 +96,7 @@ if __name__ =='__main__':
     query_list = img_to_test(query_path[1])
     gallary_list = img_to_test(gallary_path[1])
 
-    print('*********************************')
+    print('************Beganing test***************')
     gallary_fc, gallary_fc_m, gallary_fc_c = extract_fc(gallary_list, 'gallary')
     query_fc, query_fc_m, query_fc_c = extract_fc(query_list, 'query')
     sio.savemat('./evulate/query_xuchang.mat', query_fc)

@@ -11,7 +11,7 @@ from Loss import CenterEasyLoss4, CenterEasyLoss5
 batch_person = 16
 person_size = 16
 epoches = 100000
-margin = 0.2
+margin = 0.1
 scale = 0.5
 
 trainList = ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\',
@@ -27,7 +27,7 @@ writer = SummaryWriter('.\log\log.mat')
 
 model = MobileNetV2().to('cuda')
 model.train()
-model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel87.pt'))
+model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel46.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
 
