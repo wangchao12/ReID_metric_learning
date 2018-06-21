@@ -9,7 +9,7 @@ from Dataset_to_pt import img_to_test
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel3.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel56.pt'))
 
 
 def all_diffs(a, b):
@@ -93,14 +93,14 @@ if __name__ =='__main__':
     query_path = ['E:\Person_ReID\DataSet\SmartVision_test_dataset\subway\query_128_64',
                   'E:\Person_ReID\DataSet\SmartVision_test_dataset\detected_ped_images\query',
                   'E:\Person_ReID\DataSet\Market-1501-v15.09.15\query']
-    query_list = img_to_test(query_path[1])
-    gallary_list = img_to_test(gallary_path[1])
+    query_list = img_to_test(query_path[0])
+    gallary_list = img_to_test(gallary_path[0])
 
     print('************Beganing test***************')
     gallary_fc, gallary_fc_m, gallary_fc_c = extract_fc(gallary_list, 'gallary')
     query_fc, query_fc_m, query_fc_c = extract_fc(query_list, 'query')
-    sio.savemat('./evulate/query_xuchang.mat', query_fc)
-    sio.savemat('./evulate/gallary_xuchang.mat', gallary_fc)
+    sio.savemat('./evulate/query_subway.mat', query_fc)
+    sio.savemat('./evulate/gallary_subway.mat', gallary_fc)
 
 
 

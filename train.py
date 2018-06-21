@@ -1,5 +1,5 @@
 from DataLoader import DataLoader
-from models.mobilenet_multiway import *
+from models.mobilenet_multiway2 import *
 import torch.optim as optim
 import torch
 import torch.nn as nn
@@ -25,9 +25,11 @@ testloader = DataLoader(datafile=testList, batch_person=batch_person, person_siz
 writer = SummaryWriter('.\log\log.mat')
 
 
-model = MobileNetV2().to('cuda')
+model0 = MobileNetV2().to('cuda')
+model0.train()
+model = ModelContainer(model0).to('cuda')
 model.train()
-model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel46.pt'))
+# model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel46.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
 
@@ -80,5 +82,5 @@ for i in range(epoches):
         min_test_loss = sum_loss / testloader.num_step
         print('min_test_loss', min_test_loss, 'test_loss', sum_loss / testloader.num_step)
         print('**************save model*******************')
-        torch.save(model.state_dict(), '.\checkpoint\ReID_HardModel{}.pt'.format(str(i)))
+        torch.save(model.model.state_dict(), '.\checkpoint\ReID_HardModel{}.pt'.format(str(i)))
     writer.savetomat()
