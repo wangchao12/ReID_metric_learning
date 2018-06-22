@@ -98,36 +98,70 @@ class MobileNetV2(nn.Module):
                               conv_1x1_bn(320, self.last_channel),
                               nn.AvgPool2d((8, 4))]
         ##
-        self.sub_branch1 = [InvertedResidual(32, 64, 1, 6),
-                            InvertedResidual(64, 96, 2, 6),
-                            InvertedResidual(96, 160, 1, 6),
-                            InvertedResidual(160, 320, 1, 6),
-                            conv_1x1_bn(320, self.last_channel),
-                            nn.AvgPool2d((4, 4))]
-        ##
-        self.sub_branch2 = [InvertedResidual(32, 64, 1, 6),
+        self.sub_branch21 = [InvertedResidual(32, 64, 1, 6),
                              InvertedResidual(64, 96, 2, 6),
                              InvertedResidual(96, 160, 1, 6),
                              InvertedResidual(160, 320, 1, 6),
                              conv_1x1_bn(320, self.last_channel),
                              nn.AvgPool2d((4, 4))]
+        ##
+        self.sub_branch22 = [InvertedResidual(32, 64, 1, 6),
+                             InvertedResidual(64, 96, 2, 6),
+                             InvertedResidual(96, 160, 1, 6),
+                             InvertedResidual(160, 320, 1, 6),
+                             conv_1x1_bn(320, self.last_channel),
+                             nn.AvgPool2d((4, 4))]
+        ##
+        self.sub_branch31 = [InvertedResidual(32, 64, 1, 6),
+                             InvertedResidual(64, 96, 2, 6),
+                             InvertedResidual(96, 160, 1, 6),
+                             InvertedResidual(160, 320, 1, 6),
+                             conv_1x1_bn(320, self.last_channel),
+                             nn.AvgPool2d((3, 4))]
+        ##
+        self.sub_branch32 = [InvertedResidual(32, 64, 1, 6),
+                             InvertedResidual(64, 96, 2, 6),
+                             InvertedResidual(96, 160, 1, 6),
+                             InvertedResidual(160, 320, 1, 6),
+                             conv_1x1_bn(320, self.last_channel),
+                             nn.AvgPool2d((3, 4))]
+        ##
+        self.sub_branch33 = [InvertedResidual(32, 64, 1, 6),
+                             InvertedResidual(64, 96, 2, 6),
+                             InvertedResidual(96, 160, 1, 6),
+                             InvertedResidual(160, 320, 1, 6),
+                             conv_1x1_bn(320, self.last_channel),
+                             nn.AvgPool2d((3, 4))]
 
         # make it nn.Sequential
         self.backbone = nn.Sequential(*self.backbone)
         self.global_branch = nn.Sequential(*self.global_branch)
-        self.sub_branch1 = nn.Sequential(*self.sub_branch1)
-        self.sub_branch2 = nn.Sequential(*self.sub_branch2)
-
+        self.sub_branch21 = nn.Sequential(*self.sub_branch21)
+        self.sub_branch22 = nn.Sequential(*self.sub_branch22)
+        self.sub_branch31 = nn.Sequential(*self.sub_branch31)
+        self.sub_branch32 = nn.Sequential(*self.sub_branch32)
+        self.sub_branch33 = nn.Sequential(*self.sub_branch33)
         # building classifier
         self.global_embedding = nn.Sequential(
            nn.Linear(self.last_channel, n_embeddings)
         )
 
-        self.sub1_embedding = nn.Sequential(
+        self.sub21_embedding = nn.Sequential(
             nn.Linear(self.last_channel, n_embeddings)
         )
 
-        self.sub2_embedding = nn.Sequential(
+        self.sub22_embedding = nn.Sequential(
+            nn.Linear(self.last_channel, n_embeddings)
+        )
+
+        self.sub31_embedding = nn.Sequential(
+            nn.Linear(self.last_channel, n_embeddings)
+        )
+
+        self.sub32_embedding = nn.Sequential(
+            nn.Linear(self.last_channel, n_embeddings)
+        )
+        self.sub33_embedding = nn.Sequential(
             nn.Linear(self.last_channel, n_embeddings)
         )
 
@@ -136,24 +170,44 @@ class MobileNetV2(nn.Module):
         back_fm = self.backbone(img)
         global_fc = self.global_branch(back_fm)
         global_fc = global_fc.view(-1, self.last_channel)
-        sub1_fc = self.sub_branch1(back_fm[:, :, 0:8, :])
-        sub1_fc = sub1_fc.view(-1, self.last_channel)
-        sub2_fc = self.sub_branch2(back_fm[:, :, 9:16, :])
-        sub2_fc = sub2_fc.view(-1, self.last_channel)
+        sub21_fc = self.sub_branch21(back_fm[:, :, 0:7, :])
+        sub21_fc = sub21_fc.view(-1, self.last_channel)
+
+        sub22_fc = self.sub_branch22(back_fm[:, :, 8:15, :])
+        sub22_fc = sub22_fc.view(-1, self.last_channel)
+
+        sub31_fc = self.sub_branch31(back_fm[:, :, 0:5, :])
+        sub31_fc = sub31_fc.view(-1, self.last_channel)
+
+        sub32_fc = self.sub_branch32(back_fm[:, :, 5:10, :])
+        sub32_fc = sub32_fc.view(-1, self.last_channel)
+
+        sub33_fc = self.sub_branch33(back_fm[:, :, 10:15, :])
+        sub33_fc = sub33_fc.view(-1, self.last_channel)
 
         global_emb = self.global_embedding(global_fc)
         global_emb = global_emb / th.unsqueeze(th.norm(global_emb, 2, -1), -1)
 
-        sub1_emb = self.sub1_embedding(sub1_fc)
-        sub1_emb = sub1_emb / th.unsqueeze(th.norm(sub1_emb, 2, -1), -1)
+        sub21_emb = self.sub21_embedding(sub21_fc)
+        sub21_emb = sub21_emb / th.unsqueeze(th.norm(sub21_emb, 2, -1), -1)
 
-        sub2_emb = self.sub2_embedding(sub2_fc)
-        sub2_emb = sub2_emb / th.unsqueeze(th.norm(sub2_emb, 2, -1), -1)
+        sub22_emb = self.sub22_embedding(sub22_fc)
+        sub22_emb = sub22_emb / th.unsqueeze(th.norm(sub22_emb, 2, -1), -1)
 
-        all_emb = th.cat((global_emb, sub1_emb, sub2_emb), dim=-1)
+        sub31_emb = self.sub31_embedding(sub31_fc)
+        sub31_emb = sub31_emb / th.unsqueeze(th.norm(sub31_emb, 2, -1), -1)
+
+        sub32_emb = self.sub32_embedding(sub32_fc)
+        sub32_emb = sub32_emb / th.unsqueeze(th.norm(sub32_emb, 2, -1), -1)
+
+        sub33_emb = self.sub33_embedding(sub33_fc)
+        sub33_emb = sub33_emb / th.unsqueeze(th.norm(sub33_emb, 2, -1), -1)
+
+        all_emb = th.cat((global_emb, sub21_emb, sub22_emb, sub31_emb, sub32_emb, sub33_emb), dim=-1)
         all_emb = all_emb / th.unsqueeze(th.norm(all_emb, 2, -1), -1)
 
-        return global_emb, global_fc, sub1_emb, sub1_fc, sub2_emb, sub2_fc, all_emb
+        return global_emb, global_fc, sub21_emb, sub21_fc, sub22_emb, sub22_fc,  \
+               sub31_emb, sub31_fc, sub32_emb, sub32_fc,  sub33_emb, sub33_fc, all_emb
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -180,18 +234,34 @@ class ModelContainer(nn.Module):
         self.global_classifier = nn.Sequential(
             nn.Linear(self.last_channel, self.n_persons)
         )
-        self.sub1_classifier = nn.Sequential(
+        self.sub21_classifier = nn.Sequential(
             nn.Linear(self.last_channel, self.n_persons)
         )
-        self.sub2_classifier = nn.Sequential(
+        self.sub22_classifier = nn.Sequential(
             nn.Linear(self.last_channel, self.n_persons)
         )
+        self.sub31_classifier = nn.Sequential(
+            nn.Linear(self.last_channel, self.n_persons)
+        )
+        self.sub32_classifier = nn.Sequential(
+            nn.Linear(self.last_channel, self.n_persons)
+        )
+        self.sub33_classifier = nn.Sequential(
+            nn.Linear(self.last_channel, self.n_persons)
+        )
+
     def forward(self, input):
-        global_emb, global_fc, sub1_emb, sub1_fc, sub2_emb, sub2_fc, all_emb = self.model(input)
+        global_emb, global_fc, sub21_emb, sub21_fc, sub22_emb, sub22_fc, \
+        sub31_emb, sub31_fc, sub32_emb, sub32_fc, sub33_emb, sub33_fc, all_emb = self.model(input)
         global_cls = self.global_classifier(global_fc)
-        sub1_cls = self.sub1_classifier(sub1_fc)
-        sub2_cls = self.sub2_classifier(sub2_fc)
-        return global_emb, global_cls, sub1_emb, sub1_cls, sub2_emb, sub2_cls, all_emb
+        sub21_cls = self.sub21_classifier(sub21_fc)
+        sub22_cls = self.sub22_classifier(sub22_fc)
+        sub31_cls = self.sub31_classifier(sub31_fc)
+        sub32_cls = self.sub32_classifier(sub32_fc)
+        sub33_cls = self.sub33_classifier(sub33_fc)
+
+        return global_emb, global_cls, sub21_emb, sub21_cls, sub22_emb, sub22_cls,\
+               sub31_emb, sub31_cls, sub32_emb, sub32_cls, sub33_emb, sub33_cls, all_emb
 
 
 

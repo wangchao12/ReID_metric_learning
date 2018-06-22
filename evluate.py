@@ -1,4 +1,4 @@
-from models.mobilenet_multiway import MobileNetV2
+from models.mobilenet_multiway2 import MobileNetV2
 import torch as th
 import time
 import numpy as np
@@ -9,7 +9,7 @@ from Dataset_to_pt import img_to_test
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel56.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel15.pt'))
 
 
 def all_diffs(a, b):
@@ -46,7 +46,7 @@ def extract_fc(query, name):
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            _, _, _, _, _, _, fc = model(th.cuda.FloatTensor(img2))
+            _, _, _, _, _, _, _, _, _, _, _, _, fc = model(th.cuda.FloatTensor(img2))
             t2 = time.time()
             dict_i = {'img': img, 'fc': fc.cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
@@ -93,14 +93,14 @@ if __name__ =='__main__':
     query_path = ['E:\Person_ReID\DataSet\SmartVision_test_dataset\subway\query_128_64',
                   'E:\Person_ReID\DataSet\SmartVision_test_dataset\detected_ped_images\query',
                   'E:\Person_ReID\DataSet\Market-1501-v15.09.15\query']
-    query_list = img_to_test(query_path[0])
-    gallary_list = img_to_test(gallary_path[0])
+    query_list = img_to_test(query_path[2])
+    gallary_list = img_to_test(gallary_path[2])
 
     print('************Beganing test***************')
     gallary_fc, gallary_fc_m, gallary_fc_c = extract_fc(gallary_list, 'gallary')
     query_fc, query_fc_m, query_fc_c = extract_fc(query_list, 'query')
-    sio.savemat('./evulate/query_subway.mat', query_fc)
-    sio.savemat('./evulate/gallary_subway.mat', gallary_fc)
+    sio.savemat('./evulate/query_1501.mat', query_fc)
+    sio.savemat('./evulate/gallary_1501.mat', gallary_fc)
 
 
 

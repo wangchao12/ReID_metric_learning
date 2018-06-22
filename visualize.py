@@ -1,4 +1,4 @@
-from models.mobilenet_multiway import MobileNetV2
+from models.mobilenet_mask import MobileNetV2
 import os, cv2
 import numpy as np
 import torch as th
