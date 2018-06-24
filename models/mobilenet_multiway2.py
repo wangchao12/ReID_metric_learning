@@ -3,6 +3,7 @@ import torch as th
 import cv2
 import math
 import numpy as np
+import copy
 
 
 def conv_bn(inp, oup, stride):
