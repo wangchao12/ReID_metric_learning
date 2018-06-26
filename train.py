@@ -29,7 +29,7 @@ model_base = MobileNetV2().to('cuda')
 model_base.train()
 model = ModelContainer(model_base).to('cuda')
 model.train()
-model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel47.pt'))
+model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel67.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
 
@@ -44,40 +44,25 @@ for i in range(epoches):
     for j in range(trainloader.num_step):
         iter += 1
         batch_x, label = trainloader.next_batch()
-        global_emb, global_cls, sub21_emb, sub21_cls, sub22_emb, sub22_cls, \
-        sub31_emb, sub31_cls, sub32_emb, sub32_cls, sub33_emb, sub33_cls, all_emb = model(torch.cuda.FloatTensor(batch_x))
-        loss_global_cls = nn.CrossEntropyLoss()(global_cls, torch.cuda.LongTensor(label))
-        loss_sub21_cls = nn.CrossEntropyLoss()(sub21_cls, torch.cuda.LongTensor(label))
-        loss_sub22_cls = nn.CrossEntropyLoss()(sub22_cls, torch.cuda.LongTensor(label))
-        loss_sub31_cls = nn.CrossEntropyLoss()(sub31_cls, torch.cuda.LongTensor(label))
-        loss_sub32_cls = nn.CrossEntropyLoss()(sub32_cls, torch.cuda.LongTensor(label))
-        loss_sub33_cls = nn.CrossEntropyLoss()(sub33_cls, torch.cuda.LongTensor(label))
-
-        _, _, loss_global_emb, _ = CenterEasyLoss(global_emb, pids, batch_person, person_size, scale, margin)
-        _, _, loss_sub21_emb, _ = CenterEasyLoss(sub21_emb, pids, batch_person, person_size, scale, margin)
-        _, _, loss_sub22_emb, _ = CenterEasyLoss(sub22_emb, pids, batch_person, person_size, scale, margin)
-        _, _, loss_sub31_emb, _ = CenterEasyLoss(sub31_emb, pids, batch_person, person_size, scale, margin)
-        _, _, loss_sub32_emb, _ = CenterEasyLoss(sub32_emb, pids, batch_person, person_size, scale, margin)
-        _, _, loss_sub33_emb, _ = CenterEasyLoss(sub33_emb, pids, batch_person, person_size, scale, margin)
-        center_loss, cross_loss, loss_all_emb, n_hards = CenterEasyLoss(all_emb, pids, batch_person, person_size, scale, margin, fcs=768)
-
-        loss = loss_global_emb + loss_sub21_emb + loss_sub22_emb + loss_sub31_emb + loss_sub32_emb + loss_sub33_emb + \
-               loss_all_emb + loss_global_cls + loss_sub21_cls + loss_sub22_cls + loss_sub31_cls + loss_sub32_cls + loss_sub33_cls
+        output = model(torch.cuda.FloatTensor(batch_x))
+        loss_cls = [nn.CrossEntropyLoss()(i, torch.cuda.LongTensor(label)) for i in output[4:7]]
+        loss_tri = [CenterEasyLoss(i, pids, batch_person, person_size, scale, margin) for i in output[0:4]]
+        loss = sum(loss_cls) + sum([loss_tri_[2] for loss_tri_ in loss_tri])
 
         loss.backward()
         optresnet.step()
+        writer.write('trainTripletLoss', float(loss_tri[0][2]))
         writer.write('trainLoss', float(loss))
-        writer.write('loss_all_emb', float(loss_all_emb))
-        writer.write('trainhards', float(n_hards))
+        writer.write('trainhards', float(loss_tri[0][3]))
         print('train epoch', i, 'iter', j, 'loss', float(loss), 'center_loss',
-              float(center_loss), 'cross_loss', float(cross_loss), 'n_hards', n_hards)
+              float(loss_tri[0][0]), 'cross_loss', float(loss_tri[0][1]), 'n_hards', loss_tri[0][3])
 
     sum_loss = 0
     ###############test stage################################
     for k in range(testloader.num_step):
         test_x, label = testloader.next_batch()
-        _, _, _, _, _, _, _, _, _, _, _, _, all_emb = model(torch.cuda.FloatTensor(test_x))
-        center_loss, cross_loss, loss, n_hards = CenterEasyLoss(all_emb, pids, batch_person, person_size, scale, margin, fcs=768)
+        output = model(torch.cuda.FloatTensor(test_x))
+        center_loss, cross_loss, loss, n_hards = CenterEasyLoss(output[0], pids, batch_person, person_size, scale, margin)
         writer.write('testLoss', float(loss))
         writer.write('testHards', float(n_hards))
         print('test epoch', i, 'iter', k, 'loss', float(loss), 'center_loss',
@@ -87,5 +72,5 @@ for i in range(epoches):
         print('min_test_loss', min_test_loss, 'test_loss', sum_loss / testloader.num_step)
         min_test_loss = sum_loss / testloader.num_step
         print('**************save model*******************')
-        torch.save(model.model.state_dict(), '.\checkpoint\ReID_HardModel{}.pt'.format(str(i)))
+        torch.save(model.state_dict(), '.\checkpoint\ReID_HardModel{}.pt'.format(str(i)))
     writer.savetomat()

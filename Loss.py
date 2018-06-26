@@ -31,11 +31,11 @@ def cdist(a, b):
     return th.norm(diffs, 2, -1)
 
 
-def CenterEasyLoss3(fc, batch_person, num_file, scale, fcs):
+def CenterEasyLoss3(fc, batch_person, num_file, scale):
 
     #########state of art ################
 
-    fc = fc.view(batch_person, num_file, fcs)
+    fc = fc.view(batch_person, num_file, -1)
     person_center = th.mean(input=fc, dim=1)
     distance = th.norm(fc - th.unsqueeze(person_center, dim=1), p=2, dim=-1)
     (center_max, idx) = th.max(distance, dim=-1)
@@ -54,9 +54,9 @@ def CenterEasyLoss3(fc, batch_person, num_file, scale, fcs):
 
 
 
-def CenterEasyLoss4(fc, pids, batch_person, num_file, scale, margin, fcs=128):
-    center_loss, cross_mean_loss, loss = CenterEasyLoss3(fc, batch_person, num_file, scale, fcs)
-    person_center = th.unsqueeze(th.mean(input=fc.view(batch_person, num_file, fcs), dim=1), dim=0)
+def CenterEasyLoss4(fc, pids, batch_person, num_file, scale, margin):
+    center_loss, cross_mean_loss, loss = CenterEasyLoss3(fc, batch_person, num_file, scale)
+    person_center = th.unsqueeze(th.mean(input=fc.view(batch_person, num_file, -1), dim=1), dim=0)
     distance = th.norm(th.unsqueeze(fc, dim=1) - person_center, dim=-1)
     pid = th.from_numpy(np.arange(0, batch_person, 1, dtype=np.int32)).to('cuda')
     same_identity_mask = (th.eq(th.unsqueeze(pids, dim=1), th.unsqueeze(pid, dim=0)))
@@ -79,8 +79,8 @@ def CenterEasyLoss4(fc, pids, batch_person, num_file, scale, margin, fcs=128):
 
 
 
-def CenterEasyLoss5(fc, pids, batch_person, num_file, scale, margin, fcs=128):
-    person_center = th.unsqueeze(th.mean(input=fc.view(batch_person, num_file, fcs), dim=1), dim=0)
+def CenterEasyLoss5(fc, pids, batch_person, num_file, scale, margin):
+    person_center = th.unsqueeze(th.mean(input=fc.view(batch_person, num_file, -1), dim=1), dim=0)
     distance = th.norm(th.unsqueeze(fc, dim=1) - person_center, dim=-1)
     pid = th.from_numpy(np.arange(0, batch_person, 1, dtype=np.int32)).to('cuda')
     same_identity_mask = (th.eq(th.unsqueeze(pids, dim=1), th.unsqueeze(pid, dim=0)))

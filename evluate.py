@@ -9,7 +9,7 @@ from Dataset_to_pt import img_to_test
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel15.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel12.pt'))
 
 
 def all_diffs(a, b):
@@ -39,21 +39,21 @@ def cdist(a, b):
 
 
 def extract_fc(query, name):
-    query_list = [];query_list_m = [];query_list_c = []
+    query_list = []
     for idx, query_i in enumerate(query):
         try:
             img = query_i['image']
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            _, _, _, _, _, _, _, _, _, _, _, _, fc = model(th.cuda.FloatTensor(img2))
+            output = model(th.cuda.FloatTensor(img2))
             t2 = time.time()
-            dict_i = {'img': img, 'fc': fc.cpu().detach().numpy(), 'id': id}
+            dict_i = {'img': img, 'fc': output[0].cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
             print(idx, 'time:', t2 - t1)
         except:
             continue
-    return {name: query_list}, {name: query_list_m}, {name: query_list_c}
+    return {name: query_list}
 
 
 
@@ -97,8 +97,8 @@ if __name__ =='__main__':
     gallary_list = img_to_test(gallary_path[2])
 
     print('************Beganing test***************')
-    gallary_fc, gallary_fc_m, gallary_fc_c = extract_fc(gallary_list, 'gallary')
-    query_fc, query_fc_m, query_fc_c = extract_fc(query_list, 'query')
+    gallary_fc = extract_fc(gallary_list, 'gallary')
+    query_fc = extract_fc(query_list, 'query')
     sio.savemat('./evulate/query_1501.mat', query_fc)
     sio.savemat('./evulate/gallary_1501.mat', gallary_fc)
 
