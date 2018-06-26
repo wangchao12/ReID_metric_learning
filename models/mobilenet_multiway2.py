@@ -239,7 +239,7 @@ class ModelVisual(nn.Module):
 
 
 if __name__ == '__main__':
-    img = cv2.imread('E:\Person_ReID\ReID_metric_learning\\0000_c1s1_000151_0.jpg')
+    img = cv2.imread('E:\Person_ReID\ReID_metric_learning\\0000_1s1_000151_0.jpg')
     img = img.astype(np.int8)
     img_r = cv2.resize(img[:, :, 0], (128, 64))
     print()
