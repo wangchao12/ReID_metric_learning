@@ -96,16 +96,14 @@ class MobileNetV2(nn.Module):
                               InvertedResidual(64, 96, 1, 6),
                               InvertedResidual(96, 160, 1, 6),
                               InvertedResidual(160, 320, 1, 6),
-                              conv_1x1_bn(320, self.last_channel),
-                              nn.AvgPool2d((4, 4))]
+                              conv_1x1_bn(320, self.last_channel)]
         ##
         self.sub_branch22 = copy.deepcopy(self.sub_branch21)
         self.global_branch = [InvertedResidual(32, 64, 2, 6),
                               InvertedResidual(64, 96, 1, 6),
                               InvertedResidual(96, 160, 1, 6),
                               InvertedResidual(160, 320, 1, 6),
-                              conv_1x1_bn(320, self.last_channel),
-                              nn.AvgPool2d((8, 4))]
+                              conv_1x1_bn(320, self.last_channel)]
 
         ## make layers sequential
         self.backbone = nn.Sequential(*self.backbone)
@@ -133,17 +131,20 @@ class MobileNetV2(nn.Module):
     def forward(self, img):
         feature_map = self.backbone(img)
 
-        global_fc = self.global_branch(feature_map)
+        global_fcm = self.global_branch(feature_map)
+        global_fc = nn.AvgPool2d((8, 4))(global_fcm)
         global_fc = global_fc.view(-1, self.last_channel)
         global_emb = self.global_embedding(global_fc)
         global_emb = global_emb / th.unsqueeze(th.norm(global_emb, 2, -1), -1)
 
-        sub21_fc = self.sub_branch21(feature_map[:, :, 0:7, :])
+        sub21_fcm = self.sub_branch21(feature_map[:, :, 0:7, :])
+        sub21_fc = nn.AvgPool2d((4, 4))(sub21_fcm)
         sub21_fc = sub21_fc.view(-1, self.last_channel)
         sub21_emb = self.sub21_embedding(sub21_fc)
         sub21_emb = sub21_emb / th.unsqueeze(th.norm(sub21_emb, 2, -1), -1)
 
-        sub22_fc = self.sub_branch22(feature_map[:, :, 8:15, :])
+        sub22_fcm = self.sub_branch22(feature_map[:, :, 8:15, :])
+        sub22_fc = nn.AvgPool2d((4, 4))(sub22_fcm)
         sub22_fc = sub22_fc.view(-1, self.last_channel)
         sub22_emb = self.sub22_embedding(sub22_fc)
         sub22_emb = sub22_emb / th.unsqueeze(th.norm(sub22_emb, 2, -1), -1)
@@ -152,7 +153,7 @@ class MobileNetV2(nn.Module):
         all_emb = self.all_embedding(all_fc)
         all_emb = all_emb / th.unsqueeze(th.norm(all_emb, 2, -1), -1)
 
-        return all_emb, global_emb, sub21_emb, sub22_emb, global_fc, sub21_fc, sub22_fc
+        return all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -192,8 +193,8 @@ class ModelContainer(nn.Module):
 
 
     def forward(self, input):
-
-        all_emb, global_emb, sub21_emb, sub22_emb, global_fc, sub21_fc, sub22_fc = self.model(input)
+        # all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc
+        all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc = self.model(input)
         global_cls = self.global_classifier(global_fc)
         sub21_cls = self.sub21_classifier(sub21_fc)
         sub22_cls = self.sub22_classifier(sub22_fc)
@@ -225,15 +226,21 @@ class ModelVisual(nn.Module):
 
 
     def forward(self, input):
-
-        all_emb, global_emb, sub21_emb, sub22_emb, global_fc, sub21_fc, sub22_fc = self.model(input)
+        all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc = self.model(input)
         global_cls = self.global_classifier(global_fc)
-        global_cls_softmax = nn.Softmax()(global_cls)
-        global_cls_softmax_np = global_cls_softmax.detach().cpu().numpy()
-        sum_np = np.sum(global_cls_softmax_np)
+        weight = th.unsqueeze(th.unsqueeze(self.global_classifier[0].weight, -1), -1)
+        fcm = th.sum(nn.ReLU6()(global_fcm * weight), dim=1)
+        global_cls_softmax = th.unsqueeze(th.transpose(th.nn.Softmax()(global_cls), 1, 0), -1)
+        mask = th.sum(fcm * global_cls_softmax, 0)
+        max_mask = th.max(th.max(mask, -1)[0], -1)[0]
+        mask = th.unsqueeze(th.unsqueeze(mask / max_mask, 0), 0)
+        mask = th.where(mask > 0.6 * th.ones_like(mask), th.ones_like(mask), th.zeros_like(mask))
+        mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
+
+        # mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
         sub21_cls = self.sub21_classifier(sub21_fc)
         sub22_cls = self.sub22_classifier(sub22_fc)
-        return all_emb, global_emb, sub21_emb, sub22_emb, global_cls_softmax, sub21_cls, sub22_cls
+        return all_emb, global_emb, sub21_emb, sub22_emb, sub21_cls, sub22_cls, mask
 
 
 
