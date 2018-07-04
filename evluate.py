@@ -6,12 +6,13 @@ import scipy.io as sio
 from Dataset_to_pt import img_to_test
 
 
-
 model0 = MobileNetV2().to('cuda')
 model0.eval()
 model = ModelContainer(model0).to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel97.pt'))
+
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel10.pt'))
+
 
 
 def all_diffs(a, b):

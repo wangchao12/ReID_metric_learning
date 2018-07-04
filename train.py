@@ -8,8 +8,8 @@ from SummaryWriter import SummaryWriter
 from Loss import CenterEasyLoss4 as CenterEasyLoss
 
 ###parameters setting###
-batch_person = 16
-person_size = 10
+batch_person = 10
+person_size = 16
 epoches = 100000
 margin = 0.1
 scale = 0.5
@@ -32,7 +32,7 @@ model_base = MobileNetV2().to('cuda')
 model_base.train()
 model = ModelContainer(model_base).to('cuda')
 model.train()
-# model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel28.pt'))
+# model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel47.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
 
@@ -41,6 +41,7 @@ for i in range(batch_person):
 pids_n = np.reshape(a=np.array(pids_n), newshape=-1)
 pids = torch.from_numpy(pids_n).to('cuda')
 min_test_loss = 1e6
+loss_merge = 0
 for i in range(epoches):
     iter = 0
     ###################################train stage###############################################
@@ -51,15 +52,15 @@ for i in range(epoches):
         loss_cls = [nn.CrossEntropyLoss()(i, torch.cuda.LongTensor(label)) for i in output[4:8]]
         loss_tri = [CenterEasyLoss(i, pids, batch_person, person_size, scale, margin) for i in output[0:4]]
         loss = sum(loss_cls) + sum([loss_tri_[2] for loss_tri_ in loss_tri])
-
-        loss.backward()
+        loss_merge += loss
+        loss_merge.backward()
+        loss_merge = 0
         optresnet.step()
         writer.write('trainTripletLoss', float(loss_tri[0][2]))
         writer.write('trainLoss', float(loss))
         writer.write('trainhards', float(loss_tri[0][3]))
         print('train epoch', i, 'iter', j, 'loss', float(loss), 'center_loss',
               float(loss_tri[0][0]), 'cross_loss', float(loss_tri[0][1]), 'n_hards', loss_tri[0][3])
-
     sum_loss = 0
     ###############test stage################################
     for k in range(testloader.num_step):
