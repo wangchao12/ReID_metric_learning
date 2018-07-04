@@ -1,4 +1,4 @@
-from models.mobilenet_multiway2 import MobileNetV2
+from models.mobilenet_multiway2 import *
 import torch as th
 import time
 import numpy as np
@@ -7,9 +7,11 @@ from Dataset_to_pt import img_to_test
 
 
 
-model = MobileNetV2().to('cuda')
+model0 = MobileNetV2().to('cuda')
+model0.eval()
+model = ModelContainer(model0).to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel12.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel97.pt'))
 
 
 def all_diffs(a, b):
@@ -46,7 +48,7 @@ def extract_fc(query, name):
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            output = model(th.cuda.FloatTensor(img2))
+            output, _, _ = model(th.cuda.FloatTensor(img2))
             t2 = time.time()
             dict_i = {'img': img, 'fc': output[0].cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
@@ -64,7 +66,6 @@ def extract_fc_acc(query, name, batch_size):
         start = i * batch_size; stop = (i + 1) * batch_size - 1
         query_list = query[start:stop]
         # for img in
-
 
     for idx, query_i in enumerate(query):
         try:

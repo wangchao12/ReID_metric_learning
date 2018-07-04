@@ -5,14 +5,18 @@ import torch
 import torch.nn as nn
 import numpy as np
 from SummaryWriter import SummaryWriter
-from Loss import CenterEasyLoss5 as CenterEasyLoss
+from Loss import CenterEasyLoss4 as CenterEasyLoss
 
 ###parameters setting###
 batch_person = 16
-person_size = 16
+person_size = 10
 epoches = 100000
 margin = 0.1
 scale = 0.5
+# ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\',
+#              'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64\\',
+#              'E:\Person_ReID\DataSet\cuhk03_release\labeled\\',
+#              'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64\\']
 # 'E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\',
 trainList = ['E:\Person_ReID\DataSet\Market-1501-v15.09.15\\bounding_box_train\\',
              'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\train_128_64\\',
@@ -24,12 +28,11 @@ trainloader = DataLoader(datafile=trainList, batch_person=batch_person, person_s
 testloader = DataLoader(datafile=testList, batch_person=batch_person, person_size=person_size)
 writer = SummaryWriter('.\log\log.mat')
 
-
 model_base = MobileNetV2().to('cuda')
 model_base.train()
 model = ModelContainer(model_base).to('cuda')
 model.train()
-model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel67.pt'))
+# model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel28.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
 
@@ -44,8 +47,8 @@ for i in range(epoches):
     for j in range(trainloader.num_step):
         iter += 1
         batch_x, label = trainloader.next_batch()
-        output = model(torch.cuda.FloatTensor(batch_x))
-        loss_cls = [nn.CrossEntropyLoss()(i, torch.cuda.LongTensor(label)) for i in output[4:7]]
+        output, output_mask, final_emb = model(torch.cuda.FloatTensor(batch_x))
+        loss_cls = [nn.CrossEntropyLoss()(i, torch.cuda.LongTensor(label)) for i in output[4:8]]
         loss_tri = [CenterEasyLoss(i, pids, batch_person, person_size, scale, margin) for i in output[0:4]]
         loss = sum(loss_cls) + sum([loss_tri_[2] for loss_tri_ in loss_tri])
 
@@ -61,7 +64,7 @@ for i in range(epoches):
     ###############test stage################################
     for k in range(testloader.num_step):
         test_x, label = testloader.next_batch()
-        output = model(torch.cuda.FloatTensor(test_x))
+        output, output_mask, final_emb = model(torch.cuda.FloatTensor(test_x))
         center_loss, cross_loss, loss, n_hards = CenterEasyLoss(output[0], pids, batch_person, person_size, scale, margin)
         writer.write('testLoss', float(loss))
         writer.write('testHards', float(n_hards))
