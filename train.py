@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from SummaryWriter import SummaryWriter
-from Loss import CenterEasyLoss4 as CenterEasyLoss
+from Loss import CenterEasyLoss5 as CenterEasyLoss
 
 ###parameters setting###
 batch_person = 16
@@ -27,7 +27,7 @@ writer = SummaryWriter('.\log\log.mat')
 
 model = MobileNetV2().to('cuda')
 model.train()
-# model.load_state_dict(torch.load('.\checkpoint\\ReID_HardModel31.pt'))
+model.load_state_dict(torch.load('.\checkpoint\\Model_mask87.pt'))
 optresnet = optim.Adadelta(model.parameters(), lr=1e-3)
 pids_n = []
 
@@ -43,6 +43,7 @@ for i in range(epoches):
     for j in range(trainloader.num_step):
         iter += 1
         batch_x, label = trainloader.next_batch()
+        # output_mask = model_mask(torch.cuda.FloatTensor(batch_x))
         output = model(torch.cuda.FloatTensor(batch_x))
         loss_cls = [nn.CrossEntropyLoss()(i, torch.cuda.LongTensor(label)) for i in output[4:7]]
         loss_tri = [CenterEasyLoss(i, pids, batch_person, person_size, scale, margin) for i in output[0:4]]
@@ -59,6 +60,7 @@ for i in range(epoches):
     ###############test stage################################
     for k in range(testloader.num_step):
         test_x, label = testloader.next_batch()
+        # output_mask = model_mask(torch.cuda.FloatTensor(test_x))
         output = model(torch.cuda.FloatTensor(test_x))
         center_loss, cross_loss, loss, n_hards = CenterEasyLoss(output[0], pids, batch_person, person_size, scale, margin)
         writer.write('testLoss', float(loss))
@@ -70,5 +72,5 @@ for i in range(epoches):
         print('min_test_loss', min_test_loss, 'test_loss', sum_loss / testloader.num_step)
         min_test_loss = sum_loss / testloader.num_step
         print('**************save model*******************')
-        torch.save(model.state_dict(), '.\checkpoint\ReID_HardModel{}.pt'.format(str(i)))
-        writer.savetomat()
+        torch.save(model.state_dict(), '.\checkpoint\Model_mask{}.pt'.format(str(i)))
+    writer.savetomat()

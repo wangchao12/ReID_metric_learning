@@ -212,6 +212,36 @@ class MobileNetV2(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ModelContainer(nn.Module):
 
     def __init__(self, model):
@@ -274,11 +304,10 @@ class ModelContainer(nn.Module):
 
         cat_emb = th.cat((all_emb, all_emb_mask), -1)
         final_emb = self.final_embedding(cat_emb)
-        final_emb = final_emb / th.unsqueeze(th.norm( final_emb, 2, -1), -1)
+        final_emb = final_emb / th.unsqueeze(th.norm(final_emb, 2, -1), -1)
 
         output = [all_emb, global_emb, sub21_emb, sub22_emb, global_cls, sub21_cls, sub22_cls]
         output_mask = [all_emb_mask, global_emb_mask, sub21_emb_mask, sub22_emb_mask, global_cls_mask, sub21_cls_mask, sub22_cls_mask]
-
 
         return output, output_mask, final_emb
 

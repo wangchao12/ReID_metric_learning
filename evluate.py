@@ -6,12 +6,10 @@ import scipy.io as sio
 from Dataset_to_pt import img_to_test
 
 
-model0 = MobileNetV2().to('cuda')
-model0.eval()
-model = ModelContainer(model0).to('cuda')
+model = MobileNetV2().to('cuda')
 model.eval()
 
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel11.pt'))
+model.load_state_dict(th.load('.\checkpoint\\Model_mask140.pt'))
 
 
 
@@ -49,9 +47,9 @@ def extract_fc(query, name):
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            output, _, final_emb = model(th.cuda.FloatTensor(img2))
+            output = model(th.cuda.FloatTensor(img2))
             t2 = time.time()
-            dict_i = {'img': img, 'fc': final_emb.cpu().detach().numpy(), 'id': id}
+            dict_i = {'img': img, 'fc': output[0].cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
             print(idx, 'time:', t2 - t1)
         except:

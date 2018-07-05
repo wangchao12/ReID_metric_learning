@@ -18,7 +18,7 @@ class VisualizeMask(object):
         files = [i for i in os.listdir(self.input)[0:-1]]
         for img_i, name_i in zip(imgs, files):
             output = self.model(th.cuda.FloatTensor(img_i))
-            mask_img = img_i * output[-1].detach().cpu().numpy()
+            mask_img = output[-1].detach().cpu().numpy()
             mask_img = np.transpose(mask_img[0, :, :, :], axes=[1, 2, 0])
             fileName = os.path.join(self.output, name_i[0:-4] + '.jpg')
             cv2.imwrite(fileName, mask_img)
@@ -27,12 +27,10 @@ class VisualizeMask(object):
 
 
 if __name__ == '__main__':
-    model_base = MobileNetV2().to('cuda')
-    model_base.eval()
-    model = VisualContainer(model_base).to('cuda')
+    model = MobileNetV2().to('cuda')
     model.eval()
-    model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel31.pt'))
-    input = 'E:\Person_ReID\DataSet\cuhk03_release\labeled\\'
-    output = 'E:\Person_ReID\ReID_metric_learning\\visualize\mask_label\\'
+    model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel56.pt'))
+    input = 'E:\Person_ReID\ReID_metric_learning\\visualize\\test\\'
+    output = 'E:\Person_ReID\ReID_metric_learning\\visualize\\mask_test2\\'
     visualizer = VisualizeMask(input, output, model)
     visualizer.save_img()
