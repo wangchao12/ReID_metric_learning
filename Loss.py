@@ -111,23 +111,6 @@ def MSE_loss(fc, fc_target):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def TripletHardLoss(fc, pids):
 
     all_distance = cdist(fc, fc)

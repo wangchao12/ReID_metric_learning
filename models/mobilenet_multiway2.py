@@ -110,7 +110,7 @@ class MobileNetV2(nn.Module):
         self.sub_branch21 = nn.Sequential(*self.sub_branch21)
         self.sub_branch22 = nn.Sequential(*self.sub_branch22)
 
-        # building embedding
+        # build embedding
         self.global_embedding = nn.Sequential(
            nn.Linear(self.last_channel, n_embeddings)
         )
@@ -126,33 +126,72 @@ class MobileNetV2(nn.Module):
         self.all_embedding = nn.Sequential(
             nn.Linear(n_embeddings * 3, n_embeddings)
         )
+        # build classifier
+        self.global_classifier = nn.Sequential(
+            nn.Linear(self.last_channel, self.n_persons)
+        )
+
+        self.sub21_classifier = nn.Sequential(
+            nn.Linear(self.last_channel, self.n_persons)
+        )
+
+        self.sub22_classifier = nn.Sequential(
+            nn.Linear(self.last_channel, self.n_persons)
+        )
+
+    def get_mask(self, global_cls, global_fcm):
+        '''
+        Args:
+            global_cls: 根据全局特征生成的分类
+            global_fcm:  全局特征feature map
+        return:
+            mask: 生成mask，用于屏蔽背景
+        '''
+        global_cls_softmax = th.nn.Softmax()(global_cls)
+        weight = th.unsqueeze(th.unsqueeze(self.global_classifier[0].weight[th.max(global_cls_softmax, -1)[1]], -1), -1)
+        mask = th.sum(nn.ReLU6()(global_fcm * weight), dim=1)
+        max_mask = th.unsqueeze(th.unsqueeze(th.max(th.max(mask, -1)[0], -1)[0], -1), -1)
+        mask = th.unsqueeze(mask / max_mask, 1)
+        mask = th.where(mask > 0.6 * th.ones_like(mask), th.ones_like(mask), th.zeros_like(mask))
+        mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
+
+        return mask
 
     def forward(self, img):
         feature_map = self.backbone(img)
-
+        #全局特征提取
         global_fcm = self.global_branch(feature_map)
         global_fc = nn.AvgPool2d((8, 4))(global_fcm)
         global_fc = global_fc.view(-1, self.last_channel)
         global_emb = self.global_embedding(global_fc)
         global_emb = global_emb / th.unsqueeze(th.norm(global_emb, 2, -1), -1)
-
+        #上半身特征提取
         sub21_fcm = self.sub_branch21(feature_map[:, :, 0:7, :])
         sub21_fc = nn.AvgPool2d((4, 4))(sub21_fcm)
         sub21_fc = sub21_fc.view(-1, self.last_channel)
         sub21_emb = self.sub21_embedding(sub21_fc)
         sub21_emb = sub21_emb / th.unsqueeze(th.norm(sub21_emb, 2, -1), -1)
-
+        #下半身特征提取
         sub22_fcm = self.sub_branch22(feature_map[:, :, 8:15, :])
         sub22_fc = nn.AvgPool2d((4, 4))(sub22_fcm)
         sub22_fc = sub22_fc.view(-1, self.last_channel)
         sub22_emb = self.sub22_embedding(sub22_fc)
         sub22_emb = sub22_emb / th.unsqueeze(th.norm(sub22_emb, 2, -1), -1)
-
+        #特征融合
         all_fc = th.cat((global_emb, sub21_emb, sub22_emb), -1)
         all_emb = self.all_embedding(all_fc)
         all_emb = all_emb / th.unsqueeze(th.norm(all_emb, 2, -1), -1)
+        #人身认定
+        global_cls = self.global_classifier(global_fc)
+        sub21_cls = self.global_classifier(sub21_fc)
+        sub22_cls = self.global_classifier(sub22_fc)
+        #生成mask
+        mask = self.get_mask(global_cls=global_cls, global_fcm=global_fcm)
+        mask_img = mask * img  #用mask去背景后图像
 
-        return all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc
+
+        return all_emb, global_emb, sub21_emb, sub22_emb, sub21_cls, sub22_cls, global_cls, mask_img
+
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -167,6 +206,10 @@ class MobileNetV2(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
+
+
+
+
 
 
 class ModelContainer(nn.Module):
@@ -244,10 +287,10 @@ class ModelContainer(nn.Module):
 
 
 
-class ModelVisual(nn.Module):
+class VisualContainer(nn.Module):
 
     def __init__(self, model):
-        super(ModelVisual, self).__init__()
+        super(VisualContainer, self).__init__()
         self.model = model
         self.last_channel = model.last_channel
         self.n_embeddings = model.n_embeddings

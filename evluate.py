@@ -11,7 +11,7 @@ model0.eval()
 model = ModelContainer(model0).to('cuda')
 model.eval()
 
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel10.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel11.pt'))
 
 
 
@@ -49,9 +49,9 @@ def extract_fc(query, name):
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            output, _, _ = model(th.cuda.FloatTensor(img2))
+            output, _, final_emb = model(th.cuda.FloatTensor(img2))
             t2 = time.time()
-            dict_i = {'img': img, 'fc': output[0].cpu().detach().numpy(), 'id': id}
+            dict_i = {'img': img, 'fc': final_emb.cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
             print(idx, 'time:', t2 - t1)
         except:
@@ -101,8 +101,8 @@ if __name__ =='__main__':
     print('************Beganing test***************')
     gallary_fc = extract_fc(gallary_list, 'gallary')
     query_fc = extract_fc(query_list, 'query')
-    sio.savemat('./evulate/query_1501.mat', query_fc)
-    sio.savemat('./evulate/gallary_1501.mat', gallary_fc)
+    sio.savemat('./evulate/query_1501_final.mat', query_fc)
+    sio.savemat('./evulate/gallary_1501_final.mat', gallary_fc)
 
 
 
