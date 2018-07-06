@@ -10,7 +10,7 @@ from Loss import CenterEasyLoss4, CenterEasyLoss5
 ###parameters setting###
 batch_person = 16
 person_size = 16
-epoches = 1000000
+epoches = 100000
 margin = 0.2
 scale = 0.5
 
