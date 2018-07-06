@@ -48,7 +48,6 @@ for i in range(epoches):
         loss_cls = [nn.CrossEntropyLoss()(i, torch.cuda.LongTensor(label)) for i in output[4:7]]
         loss_tri = [CenterEasyLoss(i, pids, batch_person, person_size, scale, margin) for i in output[0:4]]
         loss = sum(loss_cls) + sum([loss_tri_[2] for loss_tri_ in loss_tri])
-
         loss.backward()
         optresnet.step()
         writer.write('trainTripletLoss', float(loss_tri[0][2]))
