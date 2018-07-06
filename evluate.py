@@ -9,7 +9,7 @@ from Dataset_to_pt import img_to_test
 model = MobileNetV2().to('cuda')
 model.eval()
 
-model.load_state_dict(th.load('.\checkpoint\\Model_mask140.pt'))
+model.load_state_dict(th.load('.\checkpoint\\Model_mask174.pt'))
 
 
 
