@@ -1,4 +1,4 @@
-from models.mobilenet_multiway import MobileNetV2
+from models.mobilenet_multiway2 import MobileNetV2, ModelVisual
 import os, cv2
 import numpy as np
 import torch as th
@@ -27,8 +27,11 @@ class VisualizeMask(object):
 
 
 if __name__ == '__main__':
-    model = MobileNetV2().to('cuda')
-    model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel26.pt'))
+    model_base = MobileNetV2().to('cuda')
+    model_base.eval()
+    model = ModelVisual(model_base).to('cuda')
+    model.eval()
+    model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel3.pt'))
     input = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64\\'
     output = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64_mask\\'
     visualizer = VisualizeMask(input, output, model)
