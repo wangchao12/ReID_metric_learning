@@ -1,4 +1,4 @@
-from models.mobilenet_multiway import MobileNetV2
+from models.mobilenet_multiway2 import MobileNetV2
 import torch as th
 import time
 import numpy as np
@@ -9,7 +9,7 @@ from Dataset_to_pt import img_to_test
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel3.pt'))
+model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel12.pt'))
 
 
 def all_diffs(a, b):
@@ -39,21 +39,21 @@ def cdist(a, b):
 
 
 def extract_fc(query, name):
-    query_list = [];query_list_m = [];query_list_c = []
+    query_list = []
     for idx, query_i in enumerate(query):
         try:
             img = query_i['image']
             id = query_i['id']
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
-            _, _, _, _, _, _, fc = model(th.cuda.FloatTensor(img2))
+            output = model(th.cuda.FloatTensor(img2))
             t2 = time.time()
-            dict_i = {'img': img, 'fc': fc.cpu().detach().numpy(), 'id': id}
+            dict_i = {'img': img, 'fc': output[0].cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
             print(idx, 'time:', t2 - t1)
         except:
             continue
-    return {name: query_list}, {name: query_list_m}, {name: query_list_c}
+    return {name: query_list}
 
 
 
@@ -61,7 +61,11 @@ def extract_fc_acc(query, name, batch_size):
     query_list = [];query_list_m = [];query_list_c = []
     num_steps = np.floor(len(query) / batch_size)
     for i in range(num_steps):
-        start = i * batch_size; stop = (i + 1) * batch_size -1
+        start = i * batch_size; stop = (i + 1) * batch_size - 1
+        query_list = query[start:stop]
+        # for img in
+
+
     for idx, query_i in enumerate(query):
         try:
             img = query_i['image']
@@ -89,14 +93,14 @@ if __name__ =='__main__':
     query_path = ['E:\Person_ReID\DataSet\SmartVision_test_dataset\subway\query_128_64',
                   'E:\Person_ReID\DataSet\SmartVision_test_dataset\detected_ped_images\query',
                   'E:\Person_ReID\DataSet\Market-1501-v15.09.15\query']
-    query_list = img_to_test(query_path[1])
-    gallary_list = img_to_test(gallary_path[1])
+    query_list = img_to_test(query_path[2])
+    gallary_list = img_to_test(gallary_path[2])
 
-    print('*********************************')
-    gallary_fc, gallary_fc_m, gallary_fc_c = extract_fc(gallary_list, 'gallary')
-    query_fc, query_fc_m, query_fc_c = extract_fc(query_list, 'query')
-    sio.savemat('./evulate/query_xuchang.mat', query_fc)
-    sio.savemat('./evulate/gallary_xuchang.mat', gallary_fc)
+    print('************Beganing test***************')
+    gallary_fc = extract_fc(gallary_list, 'gallary')
+    query_fc = extract_fc(query_list, 'query')
+    sio.savemat('./evulate/query_1501.mat', query_fc)
+    sio.savemat('./evulate/gallary_1501.mat', gallary_fc)
 
 
 

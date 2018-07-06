@@ -1,4 +1,4 @@
-from models.mobilenet_multiway2 import MobileNetV2, ModelVisual
+from models.mobilenet_multiway2 import MobileNetV2, VisualContainer
 import os, cv2
 import numpy as np
 import torch as th
@@ -17,22 +17,20 @@ class VisualizeMask(object):
         imgs = [np.expand_dims(np.transpose(cv2.imread(os.path.join(self.input, i)), [2, 0, 1]), 0) for i in os.listdir(self.input[0:-1])[0:-1]]
         files = [i for i in os.listdir(self.input)[0:-1]]
         for img_i, name_i in zip(imgs, files):
-            _, mask_img = self.model(th.cuda.FloatTensor(img_i))
-            mask_img = np.transpose(mask_img.detach().cpu().numpy(), [0, 2, 3, 1])
-            for id, mask_i in enumerate(mask_img):
-              fileName = os.path.join(self.output, name_i[0:-4] + '_' + str(id) + '.jpg')
-              cv2.imwrite(fileName, mask_i)
+            output = self.model(th.cuda.FloatTensor(img_i))
+            mask_img = output[-1].detach().cpu().numpy()
+            mask_img = np.transpose(mask_img[0, :, :, :], axes=[1, 2, 0])
+            fileName = os.path.join(self.output, name_i[0:-4] + '.jpg')
+            cv2.imwrite(fileName, mask_img)
 
 
 
 
 if __name__ == '__main__':
-    model_base = MobileNetV2().to('cuda')
-    model_base.eval()
-    model = ModelVisual(model_base).to('cuda')
+    model = MobileNetV2().to('cuda')
     model.eval()
-    model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel3.pt'))
-    input = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64\\'
-    output = 'E:\Person_ReID\DataSet\DukeMTMC-reID\DukeMTMC-reID\\test_128_64_mask\\'
+    model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel56.pt'))
+    input = 'E:\Person_ReID\ReID_metric_learning\\visualize\\test\\'
+    output = 'E:\Person_ReID\ReID_metric_learning\\visualize\\mask_test2\\'
     visualizer = VisualizeMask(input, output, model)
     visualizer.save_img()
