@@ -149,10 +149,10 @@ class MobileNetV2(nn.Module):
         '''
         global_cls_softmax = th.nn.Softmax()(global_cls)
         weight = th.unsqueeze(th.unsqueeze(self.global_classifier[0].weight[th.max(global_cls_softmax, -1)[1]], -1), -1)
-        mask = th.sum(nn.ReLU6()(global_fcm * weight), dim=1)
+        mask = th.sum(nn.ReLU6()(global_fcm * weight), dim=1)                #此处激活函数用ReLU6非常必要，不能用ReLU
         max_mask = th.unsqueeze(th.unsqueeze(th.max(th.max(mask, -1)[0], -1)[0], -1), -1)
         mask = th.unsqueeze(mask / max_mask, 1)
-        mask = th.where(mask > 0.6 * th.ones_like(mask), th.ones_like(mask), th.zeros_like(mask))
+        mask = th.where(mask > 0.5 * th.ones_like(mask), th.ones_like(mask), th.zeros_like(mask))
         mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
 
         return mask
@@ -189,7 +189,6 @@ class MobileNetV2(nn.Module):
         mask = self.get_mask(global_cls=global_cls, global_fcm=global_fcm)
         mask_img = mask * img  #用mask去背景后图像
 
-
         return all_emb, global_emb, sub21_emb, sub22_emb, sub21_cls, sub22_cls, global_cls, mask_img
 
 
@@ -208,6 +207,20 @@ class MobileNetV2(nn.Module):
                 m.bias.data.zero_()
 
 
+class GlobalNet(nn.Module):
+
+    def __init__(self):
+        super(GlobalNet, self).__init__()
+        self.embedding = nn.Sequential(
+                nn.Linear(256, 128)
+            )
+
+    def forward(self, fc1, fc2):
+
+        self.fc_cat = th.cat((fc1, fc2), -1)
+        embeding = self.embedding(self.fc_cat)
+
+        return embeding
 
 
 
@@ -238,127 +251,124 @@ class MobileNetV2(nn.Module):
 
 
 
-
-
-
-
-class ModelContainer(nn.Module):
-
-    def __init__(self, model):
-        super(ModelContainer, self).__init__()
-        self.model = model
-        self.model_mask = copy.deepcopy(self.model)
-        self.last_channel = model.last_channel
-        self.n_embeddings = model.n_embeddings
-        self.n_persons = model.n_persons
-        # building classifier
-        self.global_classifier = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-        self.sub21_classifier = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-        self.sub22_classifier = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-        self.global_classifier_mask = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-        self.sub21_classifier_mask = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-        self.sub22_classifier_mask = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-        self.final_embedding = nn.Sequential(
-            nn.Linear(self.n_embeddings * 2, self.n_embeddings)
-        )
-
-
-    def forward(self, input):
-        all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc = self.model(input)
-        global_cls = self.global_classifier(global_fc)
-        sub21_cls = self.sub21_classifier(sub21_fc)
-        sub22_cls = self.sub22_classifier(sub22_fc)
-
-        global_cls_softmax = th.nn.Softmax()(global_cls)
-        weight = th.unsqueeze(th.unsqueeze(self.global_classifier[0].weight[th.max(global_cls_softmax, -1)[1]], -1), -1)
-        mask = th.sum(nn.ReLU6()(global_fcm * weight), dim=1)
-        max_mask = th.unsqueeze(th.unsqueeze(th.max(th.max(mask, -1)[0], -1)[0], -1), -1)
-        mask = th.unsqueeze(mask / max_mask, 1)
-        mask = th.where(mask > 0.6 * th.ones_like(mask), th.ones_like(mask), th.zeros_like(mask))
-        mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
-
-        mask_input = input * mask
-        all_emb_mask, global_emb_mask, sub21_emb_mask, sub22_emb_mask, \
-        global_fc_mask, global_fcm_mask, sub21_fc_mask, sub22_fc_mask = self.model_mask(mask_input)
-        global_cls_mask = self.global_classifier_mask(global_fc_mask)
-        sub21_cls_mask = self.sub21_classifier_mask(sub21_fc_mask)
-        sub22_cls_mask = self.sub22_classifier_mask(sub22_fc_mask)
-
-        cat_emb = th.cat((all_emb, all_emb_mask), -1)
-        final_emb = self.final_embedding(cat_emb)
-        final_emb = final_emb / th.unsqueeze(th.norm(final_emb, 2, -1), -1)
-
-        output = [all_emb, global_emb, sub21_emb, sub22_emb, global_cls, sub21_cls, sub22_cls]
-        output_mask = [all_emb_mask, global_emb_mask, sub21_emb_mask, sub22_emb_mask, global_cls_mask, sub21_cls_mask, sub22_cls_mask]
-
-        return output, output_mask, final_emb
-
-
-
-
-
-
-class VisualContainer(nn.Module):
-
-    def __init__(self, model):
-        super(VisualContainer, self).__init__()
-        self.model = model
-        self.last_channel = model.last_channel
-        self.n_embeddings = model.n_embeddings
-        self.n_persons = model.n_persons
-        # building classifier
-        self.global_classifier = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-        self.sub21_classifier = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-        self.sub22_classifier = nn.Sequential(
-            nn.Linear(self.last_channel, self.n_persons)
-        )
-
-
-    def forward(self, input):
-        all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc = self.model(input)
-        global_cls = self.global_classifier(global_fc)
-        weight = th.unsqueeze(th.unsqueeze(self.global_classifier[0].weight, -1), -1)
-        fcm = th.sum(nn.ReLU6()(global_fcm * weight), dim=1)
-        global_cls_softmax = th.unsqueeze(th.transpose(th.nn.Softmax()(global_cls), 1, 0), -1)
-        max_softmax = th.max(global_cls_softmax, 0)[0][0, 0]
-        global_cls_softmax = th.where(global_cls_softmax >= max_softmax * th.ones_like(global_cls_softmax),
-                                      th.ones_like(global_cls_softmax), th.zeros_like(global_cls_softmax))
-
-        mask = th.sum(fcm * global_cls_softmax, 0)
-        max_mask = th.max(th.max(mask, -1)[0], -1)[0]
-        mask = th.unsqueeze(th.unsqueeze(mask / max_mask, 0), 0)
-        mask = th.where(mask > 0.6 * th.ones_like(mask), th.ones_like(mask), th.zeros_like(mask))
-        mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
-
-        # mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
-        sub21_cls = self.sub21_classifier(sub21_fc)
-        sub22_cls = self.sub22_classifier(sub22_fc)
-        return all_emb, global_emb, sub21_emb, sub22_emb, sub21_cls, sub22_cls, mask
-
+#
+# class ModelContainer(nn.Module):
+#
+#     def __init__(self, model):
+#         super(ModelContainer, self).__init__()
+#         self.model = model
+#         self.model_mask = copy.deepcopy(self.model)
+#         self.last_channel = model.last_channel
+#         self.n_embeddings = model.n_embeddings
+#         self.n_persons = model.n_persons
+#         # building classifier
+#         self.global_classifier = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#         self.sub21_classifier = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#         self.sub22_classifier = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#         self.global_classifier_mask = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#         self.sub21_classifier_mask = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#         self.sub22_classifier_mask = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#         self.final_embedding = nn.Sequential(
+#             nn.Linear(self.n_embeddings * 2, self.n_embeddings)
+#         )
+#
+#
+#     def forward(self, input):
+#         all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc = self.model(input)
+#         global_cls = self.global_classifier(global_fc)
+#         sub21_cls = self.sub21_classifier(sub21_fc)
+#         sub22_cls = self.sub22_classifier(sub22_fc)
+#
+#         global_cls_softmax = th.nn.Softmax()(global_cls)
+#         weight = th.unsqueeze(th.unsqueeze(self.global_classifier[0].weight[th.max(global_cls_softmax, -1)[1]], -1), -1)
+#         mask = th.sum(nn.ReLU6()(global_fcm * weight), dim=1)
+#         max_mask = th.unsqueeze(th.unsqueeze(th.max(th.max(mask, -1)[0], -1)[0], -1), -1)
+#         mask = th.unsqueeze(mask / max_mask, 1)
+#         mask = th.where(mask > 0.6 * th.ones_like(mask), th.ones_like(mask), th.zeros_like(mask))
+#         mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
+#
+#         mask_input = input * mask
+#         all_emb_mask, global_emb_mask, sub21_emb_mask, sub22_emb_mask, \
+#         global_fc_mask, global_fcm_mask, sub21_fc_mask, sub22_fc_mask = self.model_mask(mask_input)
+#         global_cls_mask = self.global_classifier_mask(global_fc_mask)
+#         sub21_cls_mask = self.sub21_classifier_mask(sub21_fc_mask)
+#         sub22_cls_mask = self.sub22_classifier_mask(sub22_fc_mask)
+#
+#         cat_emb = th.cat((all_emb, all_emb_mask), -1)
+#         final_emb = self.final_embedding(cat_emb)
+#         final_emb = final_emb / th.unsqueeze(th.norm(final_emb, 2, -1), -1)
+#
+#         output = [all_emb, global_emb, sub21_emb, sub22_emb, global_cls, sub21_cls, sub22_cls]
+#         output_mask = [all_emb_mask, global_emb_mask, sub21_emb_mask, sub22_emb_mask, global_cls_mask, sub21_cls_mask, sub22_cls_mask]
+#
+#         return output, output_mask, final_emb
+#
+#
+#
+#
+#
+#
+# class VisualContainer(nn.Module):
+#
+#     def __init__(self, model):
+#         super(VisualContainer, self).__init__()
+#         self.model = model
+#         self.last_channel = model.last_channel
+#         self.n_embeddings = model.n_embeddings
+#         self.n_persons = model.n_persons
+#         # building classifier
+#         self.global_classifier = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#         self.sub21_classifier = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#         self.sub22_classifier = nn.Sequential(
+#             nn.Linear(self.last_channel, self.n_persons)
+#         )
+#
+#
+#     def forward(self, input):
+#         all_emb, global_emb, sub21_emb, sub22_emb, global_fc, global_fcm, sub21_fc, sub22_fc = self.model(input)
+#         global_cls = self.global_classifier(global_fc)
+#         weight = th.unsqueeze(th.unsqueeze(self.global_classifier[0].weight, -1), -1)
+#         fcm = th.sum(nn.ReLU6()(global_fcm * weight), dim=1)
+#         global_cls_softmax = th.unsqueeze(th.transpose(th.nn.Softmax()(global_cls), 1, 0), -1)
+#         max_softmax = th.max(global_cls_softmax, 0)[0][0, 0]
+#         global_cls_softmax = th.where(global_cls_softmax >= max_softmax * th.ones_like(global_cls_softmax),
+#                                       th.ones_like(global_cls_softmax), th.zeros_like(global_cls_softmax))
+#
+#         mask = th.sum(fcm * global_cls_softmax, 0)
+#         max_mask = th.max(th.max(mask, -1)[0], -1)[0]
+#         mask = th.unsqueeze(th.unsqueeze(mask / max_mask, 0), 0)
+#         mask = th.where(mask > 0.5 * th.ones_like(mask), th.ones_like(mask), th.zeros_like(mask))
+#         mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
+#
+#         # mask = nn.Upsample(scale_factor=16, mode='bilinear', align_corners=True)(mask)
+#         sub21_cls = self.sub21_classifier(sub21_fc)
+#         sub22_cls = self.sub22_classifier(sub22_fc)
+#         return all_emb, global_emb, sub21_emb, sub22_emb, sub21_cls, sub22_cls, mask
+#
 
 
 

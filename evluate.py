@@ -9,8 +9,11 @@ from Dataset_to_pt import img_to_test
 
 model = MobileNetV2().to('cuda')
 model.eval()
-model.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel12.pt'))
-
+model.load_state_dict(th.load('.\checkpoint\\\Model_mask174.pt'))
+######################################################################
+model_mask = MobileNetV2().to('cuda')
+model_mask.eval()
+model_mask.load_state_dict(th.load('.\checkpoint\\\ReID_HardModel87.pt'))
 
 def all_diffs(a, b):
     """
@@ -47,8 +50,11 @@ def extract_fc(query, name):
             img2 = np.expand_dims(np.transpose(img, [2, 0, 1]), axis=0)
             t1 = time.time()
             output = model(th.cuda.FloatTensor(img2))
+            output_mask = model_mask(output[-1])
+            cat_fc = th.cat((output[0], output_mask[0]), -1)
+            fc = cat_fc / th.unsqueeze(th.norm(cat_fc, 2, -1), -1)
             t2 = time.time()
-            dict_i = {'img': img, 'fc': output[0].cpu().detach().numpy(), 'id': id}
+            dict_i = {'img': img, 'fc': fc.cpu().detach().numpy(), 'id': id}
             query_list.append(dict_i)
             print(idx, 'time:', t2 - t1)
         except:
@@ -99,8 +105,8 @@ if __name__ =='__main__':
     print('************Beganing test***************')
     gallary_fc = extract_fc(gallary_list, 'gallary')
     query_fc = extract_fc(query_list, 'query')
-    sio.savemat('./evulate/query_1501.mat', query_fc)
-    sio.savemat('./evulate/gallary_1501.mat', gallary_fc)
+    sio.savemat('./evulate/query_1501_global.mat', query_fc)
+    sio.savemat('./evulate/gallary_1501_global.mat', gallary_fc)
 
 
 
